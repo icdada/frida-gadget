@@ -1,8 +1,20 @@
-"""Frida gadget injector for Android APK"""
+"""
+Frida Gadget Injector for Android APK
+
+This script allows you to inject the Frida gadget library into an Android APK.
+It provides various functionalities including:
+- Decompiling the APK using apktool
+- Downloading the appropriate Frida gadget library based on the device architecture
+- Injecting the Frida gadget library into the APK
+- Modifying the AndroidManifest.xml to add necessary permissions
+- Recompiling the APK
+- Optionally signing the APK using uber-apk-signer
+"""
 import os
 import sys
 import shutil
 import subprocess
+import json
 from shutil import which
 from pathlib import Path
 import click
@@ -39,10 +51,11 @@ def run_apktool(option: list, apk_path: str):
     with subprocess.Popen(cmd, stdin=pipe, stdout=sys.stdout, stderr=sys.stderr) as process:
         process.communicate(b"\n")
         if process.returncode != 0:
+            recommend_options = ['--no-res', '--use-aapt2']
             if 'b' in option:
-                recommend_options = []
-                if '--use-aapt2' not in option:
-                    recommend_options += ['--use-aapt2']
+                for opt in recommend_options:
+                    if opt in option:
+                        recommend_options.remove(opt)
 
                 if recommend_options:
                     logger.error("It seems like you're facing issues with Apktool.\n"
@@ -53,8 +66,9 @@ def run_apktool(option: list, apk_path: str):
                                  "'--skip-recompile' option.")
 
             if 'd' in option:
-                if '--no-res' not in option:
-                    recommend_options += ['--no-res']
+                for opt in recommend_options:
+                    if opt in option:
+                        recommend_options.remove(opt)
 
                 if recommend_options:
                     logger.error("It seems like you're facing issues with Apktool.\n"
@@ -200,7 +214,7 @@ def modify_manifest(decompiled_path):
                             ':extractNativeLibs="true"')
     android_manifest.write_text(txt, encoding="utf-8")
 
-def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, main_activity:str = None, config:str = None, custom_gadget_name:str = None):
+def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, main_activity:str = None, config:str = None, js:str = None, custom_gadget_name:str = None):
     """Inject frida gadget into an APK
 
     Args:
@@ -218,8 +232,6 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
 
     # Apply custom gadget name if provided
     if custom_gadget_name:
-        if not custom_gadget_name.startswith("lib"):
-            custom_gadget_name = f"lib{custom_gadget_name}"
         custom_gadget_name += ".so"
         logger.info("Using custom gadget name: %s", custom_gadget_name)
         gadget_name = custom_gadget_name
@@ -266,8 +278,52 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
     shutil.copy(gadget_path, lib.joinpath(lib_library_name))
 
 
-    # Upload gadget config file
-    upload_files = {'config': config}
+    # Upload gadget config and js files
+    upload_files = {'config': config, 'script': js}
+
+    if js and config:
+        with open(config, 'r') as f:
+            contents = f.read()
+            config_data = json.loads(contents)
+            if "interaction" not in config_data:
+                logger.error("The config file must contain an 'interaction' key.")
+                sys.exit(-1)
+            if "path" in config_data["interaction"]:
+                logger.debug("Updating the script path in '%s' from '%s' to 'lib%s.script.so'",
+                             config, config_data["interaction"]["path"], load_library_name)
+            config_data["interaction"]["path"] = f"lib{load_library_name}.script.so"
+            with open(lib.joinpath(f"lib{load_library_name}.config.so"), 'w') as f:
+                f.write(json.dumps(config_data, indent=4))
+            del upload_files['config']
+    elif js:
+        config_name = f"lib{load_library_name}.config.so"
+        with open(lib.joinpath(config_name), 'w') as f:
+            contents = """\
+            \r{
+            \r    "interaction": {
+            \r        "type": "script",
+            \r        "path": \"lib"""+load_library_name+""".script.so",
+            \r        "on_change": "reload"
+            \r    } 
+            \r}
+            """
+            f.write(contents)
+            logger.debug("Created the default config file: %s", config_name)
+            logger.debug(contents)
+        del upload_files['config']
+    elif config:
+        logger.warning("The '%s' config file was provided without the script file.", config)
+        logger.warning("To upload the script file to the APK, please provide the --js option.")
+        with open(config, 'r') as f:
+            contents = f.read()
+            config_data = json.loads(contents)
+            if "interaction" not in config_data:
+                logger.error("The config file must contain an 'interaction' key.")
+                sys.exit(-1)
+            if "path" not in config_data["interaction"]:
+                logger.error("The config file must contain a 'path' key.")
+                sys.exit(-1)
+            logger.warning("The script file must be located at '%s' on your device", config_data["interaction"]["path"])
 
     for file_type, file_path in upload_files.items():
         if file_path:
@@ -278,9 +334,9 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
             else:
                 target_name = f"lib{load_library_name}.{file_type}.so"
                 if file_path.name == target_name:
-                    logger.info("Uploading Frida %s file: %s", file_type, file_path.name)
+                    logger.debug("Uploading Frida %s file: %s", file_type, file_path.name)
                 else:
-                    logger.info("Renaming and uploading Frida %s file: %s -> %s", file_type, file_path.name, target_name)
+                    logger.debug("Renaming and uploading Frida %s file: %s -> %s", file_type, file_path.name, target_name)
                 shutil.copy(file_path, lib.joinpath(target_name))
 
 def sign_apk(apk_path:str):
@@ -354,20 +410,21 @@ def print_version(ctx, _, value):
 
 # pylint: disable=too-many-arguments
 @click.command()
-@click.option('--arch', default=None, help="Target architecture of the device. (options: arm64, x86_64, arm, x86)")
-@click.option('--config', help="Upload the Frida configuration file.")
-@click.option('--custom-gadget-name', default=None, help="Custom name for the Frida gadget.")
-@click.option('--no-res', is_flag=True, help="Do not decode resources.")
-@click.option('--main-activity', default=None, help="Specify the main activity if desired.")
+@click.option('--arch', default=None, help="Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)")
+@click.option('--config', help="Specify the Frida configuration file.")
+@click.option('--js', default=None, help="Specify the Frida gadget JavaScript file.")
+@click.option('--custom-gadget-name', default=None, help="Specify a custom name for the Frida gadget.")
+@click.option('--no-res', is_flag=True, help="Skip decoding resources.")
+@click.option('--main-activity', default=None, help="Specify the main activity if known.")
 @click.option('--sign', is_flag=True, help="Automatically sign the APK using uber-apk-signer.")
-@click.option('--skip-decompile', is_flag=True, help="Skip decompilation if desired.")
-@click.option('--skip-recompile', is_flag=True, help="Skip recompilation if desired.")
-@click.option('--use-aapt2', is_flag=True, help="Use aapt2 instead of aapt.")
+@click.option('--skip-decompile', is_flag=True, help="Skip the decompilation step.")
+@click.option('--skip-recompile', is_flag=True, help="Skip the recompilation step.")
+@click.option('--use-aapt2', is_flag=True, help="Use aapt2 instead of aapt for resource processing.")
 @click.option('--version', is_flag=True, callback=print_version,
-              expose_value=False, is_eager=True, help="Show version and exit.")
+              expose_value=False, is_eager=True, help="Show the version and exit.")
 @click.argument('apk_path', type=click.Path(exists=True), required=True)
 def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
-        sign:bool, custom_gadget_name:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool):
+        sign:bool, custom_gadget_name:str, js:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool):
     """Patch an APK with the Frida gadget library"""
     apk_path = Path(apk_path)
 
@@ -409,7 +466,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             sys.exit(-1)
 
     # Process if decompile is success
-    inject_gadget_into_apk(apk_path, arch, decompiled_path, no_res, main_activity, config, custom_gadget_name)
+    inject_gadget_into_apk(apk_path, arch, decompiled_path, no_res, main_activity, config, js, custom_gadget_name)
 
     # Rebuild with apktool, print apk_path if process is success
     if not skip_recompile:
@@ -430,8 +487,8 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             logger.debug('Starting APK signing using uber-apk-signer')
             sign_apk(str(apk_path))
             return
-
-    logger.info(apk_path)
+    else:
+        logger.info(apk_path)
     logger.warning(
         "The APK is not signed. Use the --sign option to sign it automatically, "
         "or sign the APK manually before installing it."
