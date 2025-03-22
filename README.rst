@@ -100,6 +100,7 @@ How to Identify?
     $ unzip -l [REDACTED]/demo-apk/handtrackinggpu/dist/handtrackinggpu.apk | grep libfrida-gadget
       21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
 
+
 With Docker
 ~~~~~~~~~~~~~~~~~~
 | Use the ``-v`` flag to bind the current directory to the ``/workspace/mount`` directory inside the Docker container.  
@@ -115,8 +116,19 @@ With Docker
     ...
     # The patched APK will be located at $APK_DIRECTORY/example/dist/example.apk
 
-How to know device architecture?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Tips: Bypass SSL Pinning or Root Detection on Non-Rooted Devices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| To bypass SSL pinning, you can use the following steps:
+|
+| 1. Download the `@akabe1/frida-multiple-unpinning <https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/>`_ or `@dzonerzy/fridantiroot <https://codeshare.frida.re/@dzonerzy/fridantiroot/>`_ (or merge them) script.
+| 2. Inject the script into the target application using the ``--js`` flag.
+| 3. Run the injected application on your device or emulator.
+| 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
+
+
+Tips: How to know device architecture?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Connect your device and run the following command:
 |
 
