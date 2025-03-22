@@ -84,22 +84,6 @@ How do I begin?
       I: Built apk into: [REDACTED]/demo-apk/handtrackinggpu/dist/handtrackinggpu.apk
       [INFO] Success
       ...
-      
-
-How to Identify?
-~~~~~~~~~~~~~~~~~~
-| Observe the main activity; the injected `loadLibrary` code will be visible.
-
-.. image:: https://github.com/ksg97031/frida-gadget/blob/trunk/images/decompile.png
-   :width: 600
-
-| Furthermore, the Frida gadget library has been injected into your APK.
-
-.. code:: sh
-
-    $ unzip -l [REDACTED]/demo-apk/handtrackinggpu/dist/handtrackinggpu.apk | grep libfrida-gadget
-      21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
-
 
 With Docker
 ~~~~~~~~~~~~~~~~~~
@@ -117,7 +101,10 @@ With Docker
     # The patched APK will be located at $APK_DIRECTORY/example/dist/example.apk
 
 
-Tips: Bypass SSL Pinning or Root Detection on Non-Rooted Devices
+Tips
+------------
+
+Bypass SSL Pinning or Root Detection on Non-Rooted Devices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | To bypass SSL pinning, you can use the following steps:
 |
@@ -127,7 +114,7 @@ Tips: Bypass SSL Pinning or Root Detection on Non-Rooted Devices
 | 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
 
 
-Tips: How to know device architecture?
+How to know device architecture?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Connect your device and run the following command:
 |
@@ -142,6 +129,16 @@ Tips: How to know device architecture?
 | - Newer high-end devices typically use ``arm64-v8a``.
 | - Older or lower-end devices might use ``armeabi-v7a``.
 | - Some specific emulators or devices may still use ``x86``.
+
+How to Identify the Injection?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| You can observe the main activity to see the injected `loadLibrary` code.
+| Additionally, the Frida gadget library will be present in your APK.
+
+.. code:: sh
+
+    $ unzip -l [REDACTED]/demo-apk/handtrackinggpu/dist/handtrackinggpu.apk | grep libfrida-gadget
+      21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
 
 Contributing
 -----------------
