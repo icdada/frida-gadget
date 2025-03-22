@@ -41,17 +41,16 @@ Usage
     $ frida-gadget --help
       Usage: cli.py [OPTIONS] APK_PATH
 
-        Patch an APK with the Frida gadget library
+      Patch an APK with the Frida gadget library
     
-         Options:
+      Options:
          --arch TEXT                Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)
          --config TEXT              Specify the Frida configuration file.
          --js TEXT                  Specify the Frida gadget JavaScript file.
          --custom-gadget-name TEXT  Specify a custom name for the Frida gadget.
          --no-res                   Skip decoding resources.
          --main-activity TEXT       Specify the main activity if known.
-         --sign                     Automatically sign the APK using
-                                    uber-apk-signer.
+         --sign                     Automatically sign the APK using uber-apk-signer.
          --skip-decompile           Skip the decompilation step.
          --skip-recompile           Skip the recompilation step.
          --use-aapt2                Use aapt2 instead of aapt for
