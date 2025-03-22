@@ -110,6 +110,11 @@ Bypass SSL Pinning or Root Detection on Non-Rooted Devices
 |
 | 1. Download the `@akabe1/frida-multiple-unpinning <https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/>`_ or `@dzonerzy/fridantiroot <https://codeshare.frida.re/@dzonerzy/fridantiroot/>`_ (or merge them) script.
 | 2. Inject the script into the target application using the ``--js`` flag.
+
+.. code:: sh
+
+    frida-gadget target.apk --js frida-multiple-unpinning.js --sign --no-res
+
 | 3. Run the injected application on your device or emulator.
 | 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
 
