@@ -7,6 +7,7 @@ from shutil import which
 from pathlib import Path
 import click
 from androguard.core.apk import APK
+from .apk_utils import get_main_activity
 from .logger import logger
 from .__version__ import __version__
 from .frida_github import FridaGithub
@@ -42,8 +43,6 @@ def run_apktool(option: list, apk_path: str):
                 recommend_options = []
                 if '--use-aapt2' not in option:
                     recommend_options += ['--use-aapt2']
-                if '--no-res' not in option:
-                    recommend_options += ['--no-res']
 
                 if recommend_options:
                     logger.error("It seems like you're facing issues with Apktool.\n"
@@ -54,7 +53,15 @@ def run_apktool(option: list, apk_path: str):
                                  "'--skip-recompile' option.")
 
             if 'd' in option:
-                logger.error("Try decompile the APK manually using the '--skip-decompile' option.")
+                if '--no-res' not in option:
+                    recommend_options += ['--no-res']
+
+                if recommend_options:
+                    logger.error("It seems like you're facing issues with Apktool.\n"
+                                 "I would suggest considering the '%s' options or opting for a hands-on approach "
+                                 "by using the '--skip-decompile' option.", ", ".join(recommend_options))
+                else:
+                    logger.error("Try decompile the APK manually using the '--skip-decompile' option.")
 
             raise subprocess.CalledProcessError(process.returncode, cmd,
                                                 sys.stdout, sys.stderr)
@@ -133,6 +140,10 @@ def insert_loadlibary(decompiled_path, main_activity, load_library_name):
                 if ".locals" not in text[idx + 1]:
                     idx += 1
                     continue
+                else:
+                    # Increase the number of locals 0 to 1
+                    if ".locals 0" in text[idx + 1]:
+                        text[idx + 1] = text[idx + 1].replace(".locals 0", ".locals 1")
 
                 if load_library_name.startswith('lib'):
                     load_library_name = load_library_name[3:]
@@ -214,11 +225,13 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
         gadget_name = custom_gadget_name
 
     if not main_activity:
-        main_activity = apk.get_main_activity()
+        main_activity = get_main_activity(apk)
+        if main_activity == -1: # multiple main activities
+            sys.exit(-1)
 
     if not main_activity:
         if len(apk.get_activities()) == 1:
-            logger.warn("The main activity was not found.\n"
+            logger.warning("The main activity was not found.\n"
                         "Using the first activity from the manifest file.")
             main_activity = apk.get_activities()[0]
         else:
@@ -281,14 +294,19 @@ def sign_apk(apk_path:str):
 
     pipe = subprocess.PIPE
     cmd = ['java', '-jar', signer_path, '--apks', apk_path]
-    with subprocess.Popen(cmd, stdin=pipe, stdout=sys.stdout, stderr=sys.stderr) as process:
-        process.communicate(b"\n")
+    with subprocess.Popen(cmd, stdin=pipe, stdout=subprocess.PIPE, stderr=sys.stderr) as process:
+        stdout, _ = process.communicate(b"\n")
         if process.returncode != 0:
             logger.error("The APK signing process failed.")
-
             raise subprocess.CalledProcessError(process.returncode, cmd, sys.stdout, sys.stderr)
-        return True
-
+        
+        output = stdout.decode()
+        print(output)
+        if "VERIFY" in output:
+            verify_message = output.split("VERIFY")[1]
+            if "file:" in verify_message:
+                apk_path  = verify_message.split("file:")[1].split("\n")[0].strip()
+                logger.info("APK signing finished: %s", apk_path)
 
 def detect_adb_arch():
     """Detect the architecture of the currently connected device via ADB.
@@ -395,7 +413,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
 
     # Rebuild with apktool, print apk_path if process is success
     if not skip_recompile:
-        logger.debug('Recompiling the new APK using apktool\n"%s"', decompiled_path)
+        logger.debug('Recompiling the new APK using apktool "%s"', decompiled_path)
 
         recompile_option = ['b']
         if use_aapt2:
@@ -406,7 +424,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         if not apk_path.exists():
             logger.error("APK not found: %s", apk_path)
         else:
-            logger.info("Success")
+            logger.info("Frida gadget injected into APK: %s", apk_path)
 
         if sign:
             logger.debug('Starting APK signing using uber-apk-signer')
