@@ -57,9 +57,11 @@ def run_apktool(option: list, apk_path: str):
                     recommend_options.remove(opt)
 
             logger.error(
-                "It seems like you're facing issues with Apktool.\n"
-                "I would suggest considering the '%s' options or opting for a hands-on approach "
-                "by using the apktool '--decompile-opts', '--recompile-opts' options.".join(recommend_options))
+                "It looks like you're having trouble with apktool.\n"
+                "Consider trying the '%s' options, or if you'd prefer more control,\n"
+                "you can manually specify apktool settings using ['--decompile-opts', '--recompile-opts', '--apktool-path'].",
+                recommend_options
+            )
 
             raise subprocess.CalledProcessError(process.returncode, cmd, sys.stdout, sys.stderr)
         return True
