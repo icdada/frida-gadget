@@ -47,7 +47,7 @@ def run_apktool(option: list, apk_path: str):
     """
 
     pipe = subprocess.PIPE
-    cmd = [APKTOOL] + option + [apk_path]
+    cmd = APKTOOL.split() + option + [apk_path]
     with subprocess.Popen(cmd, stdin=pipe, stdout=sys.stdout, stderr=sys.stderr) as process:
         process.communicate(b"\n")
         if process.returncode != 0:
@@ -422,12 +422,13 @@ def print_version(ctx, _, value):
 @click.option('--use-aapt2', is_flag=True, help="Use aapt2 instead of aapt for resource processing.")
 @click.option('--decompile-opts', default=None, help="Specify additional options for apktool decompile.")
 @click.option('--recompile-opts', default=None, help="Specify additional options for apktool recompile.")
+@click.option('--apktool-path', default=None, help="Specify the path or command to run apktool.")
 @click.option('--version', is_flag=True, callback=print_version,
               expose_value=False, is_eager=True, help="Show the version and exit.")
 @click.argument('apk_path', type=click.Path(exists=True), required=True)
 def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         sign:bool, custom_gadget_name:str, js:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
-        decompile_opts: str, recompile_opts: str):
+        decompile_opts: str, recompile_opts: str, apktool_path: str):
     """Patch an APK with the Frida gadget library
 
     Options:
@@ -443,6 +444,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
       --use-aapt2                  Use aapt2 instead of aapt for resource processing.
       --decompile-opts TEXT        Specify additional options for apktool decompile.
       --recompile-opts TEXT        Specify additional options for apktool recompile.
+      --apktool-path TEXT          Specify the path or command to run apktool.
       --version                    Show the version and exit.
     """
     apk_path = Path(apk_path)
@@ -455,6 +457,12 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         arch = 'arm64'
     elif arch == 'armeabi-v7a':
         arch = 'arm'
+
+    if apktool_path:
+        global APKTOOL
+        APKTOOL = apktool_path
+        logger.info("Using custom apktool path: %s", APKTOOL)
+
     logger.info("Gadget Architecture(--arch): %s%s", arch, "(default)" if arch == "arm64" else "")
 
     arch = arch.lower()
