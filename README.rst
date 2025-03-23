@@ -55,6 +55,9 @@ Usage
          --skip-recompile           Skip the recompilation step.
          --use-aapt2                Use aapt2 instead of aapt for
                                     resource processing.
+         --decompile-opts TEXT      Specify additional options for apktool decompile.
+         --recompile-opts TEXT      Specify additional options for apktool recompile.
+         --apktool-path TEXT        Specify the path or command to run apktool.
          --version                  Show the version and exit.
          --help                     Show this message and exit.
 
@@ -118,6 +121,35 @@ Bypass SSL Pinning or Root Detection on Non-Rooted Devices
 | 3. Run the injected application on your device or emulator.
 | 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
 
+Using a Custom Apktool
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| You can specify a custom apktool path or command using the ``--apktool-path`` option.
+| For example, you can use a script or a specific jar file:
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --apktool-path ./tools/apktool.bat --sign # Windows
+    $ frida-gadget target.apk --apktool-path "java -Xmx16g -jar ~/Download/apktool.jar" --sign # Java with 16GB memory
+
+Custom Apktool Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| You can also specify custom options for apktool decompile and recompile using the ``--decompile-opts`` and ``--recompile-opts`` options.
+| For example, you can pass additional flags to apktool:
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --decompile-opts "--only-main-classes --no-res" --recompile-opts "--force-all" --sign
+
+Specifying a Different Main Activity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| If the main activity is not automatically detected, you can specify it manually using the ``--main-activity`` option:
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --main-activity com.example.MainActivity --no-res --sign
 
 How to know device architecture?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -494,7 +494,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         if no_res:
             decompile_option += ['--no-res']
         if decompile_opts:
-            if "--no-res" in decompile_option:
+            if "--no-res" in decompile_opts:
                 if no_res:
                     # remove no-res option if it's already in the list
                     decompile_option.remove("--no-res")
