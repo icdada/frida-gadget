@@ -420,12 +420,31 @@ def print_version(ctx, _, value):
 @click.option('--skip-decompile', is_flag=True, help="Skip the decompilation step.")
 @click.option('--skip-recompile', is_flag=True, help="Skip the recompilation step.")
 @click.option('--use-aapt2', is_flag=True, help="Use aapt2 instead of aapt for resource processing.")
+@click.option('--decompile-opts', default=None, help="Specify additional options for apktool decompile.")
+@click.option('--recompile-opts', default=None, help="Specify additional options for apktool recompile.")
 @click.option('--version', is_flag=True, callback=print_version,
               expose_value=False, is_eager=True, help="Show the version and exit.")
 @click.argument('apk_path', type=click.Path(exists=True), required=True)
 def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
-        sign:bool, custom_gadget_name:str, js:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool):
-    """Patch an APK with the Frida gadget library"""
+        sign:bool, custom_gadget_name:str, js:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
+        decompile_opts: str, recompile_opts: str):
+    """Patch an APK with the Frida gadget library
+
+    Options:
+      --arch TEXT                  Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)
+      --config TEXT                Specify the Frida configuration file.
+      --js TEXT                    Specify the Frida gadget JavaScript file.
+      --custom-gadget-name TEXT    Specify a custom name for the Frida gadget.
+      --no-res                     Skip decoding resources.
+      --main-activity TEXT         Specify the main activity if known.
+      --sign                       Automatically sign the APK using uber-apk-signer.
+      --skip-decompile             Skip the decompilation step.
+      --skip-recompile             Skip the recompilation step.
+      --use-aapt2                  Use aapt2 instead of aapt for resource processing.
+      --decompile-opts TEXT        Specify additional options for apktool decompile.
+      --recompile-opts TEXT        Specify additional options for apktool recompile.
+      --version                    Show the version and exit.
+    """
     apk_path = Path(apk_path)
 
     logger.info("APK: '%s'", apk_path)
@@ -459,6 +478,8 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         decompile_option = ['d', '-o', str(decompiled_path.resolve()), '-f']
         if no_res:
             decompile_option += ['--no-res']
+        if decompile_opts:
+            decompile_option += decompile_opts.split()
         run_apktool(decompile_option, str(apk_path.resolve()))
     else:
         if not decompiled_path.exists():
@@ -475,6 +496,8 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         recompile_option = ['b']
         if use_aapt2:
             recompile_option += ['--use-aapt2']
+        if recompile_opts:
+            recompile_option += recompile_opts.split()
 
         run_apktool(recompile_option, str(decompiled_path.resolve()))
         apk_path = decompiled_path.joinpath('dist', apk_path.name)
