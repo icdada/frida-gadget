@@ -465,6 +465,14 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
 
     logger.info("Gadget Architecture(--arch): %s%s", arch, "(default)" if arch == "arm64" else "")
 
+    if js and not Path(js).exists():
+        logger.error("The specified JavaScript file does not exist: %s", js)
+        sys.exit(-1)
+
+    if config and not Path(config).exists():
+        logger.error("The specified configuration file does not exist: %s", config)
+        sys.exit(-1)
+
     arch = arch.lower()
     supported_archs = ['arm', 'arm64', 'x86', 'x86_64']
     if arch not in supported_archs:
