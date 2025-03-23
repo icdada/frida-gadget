@@ -53,8 +53,7 @@ Usage
          --sign                     Automatically sign the APK using uber-apk-signer.
          --skip-decompile           Skip the decompilation step.
          --skip-recompile           Skip the recompilation step.
-         --use-aapt2                Use aapt2 instead of aapt for
-                                    resource processing.
+         --use-aapt2                Use aapt2 instead of aapt for resource processing.
          --decompile-opts TEXT      Specify additional options for apktool decompile.
          --recompile-opts TEXT      Specify additional options for apktool recompile.
          --apktool-path TEXT        Specify the path or command to run apktool.
