@@ -52,33 +52,16 @@ def run_apktool(option: list, apk_path: str):
         process.communicate(b"\n")
         if process.returncode != 0:
             recommend_options = ['--no-res', '--use-aapt2']
-            if 'b' in option:
-                for opt in recommend_options:
-                    if opt in option:
-                        recommend_options.remove(opt)
+            for opt in recommend_options:
+                if opt in option:
+                    recommend_options.remove(opt)
 
-                if recommend_options:
-                    logger.error("It seems like you're facing issues with Apktool.\n"
-                                 "I would suggest considering the '%s' options or opting for a hands-on approach "
-                                 "by using the '--skip-recompile' option.", ", ".join(recommend_options))
-                else:
-                    logger.error("Try recompile the APK manually using the "
-                                 "'--skip-recompile' option.")
+            logger.error(
+                "It seems like you're facing issues with Apktool.\n"
+                "I would suggest considering the '%s' options or opting for a hands-on approach "
+                "by using the apktool '--decompile-opts', '--recompile-opts' options.".join(recommend_options))
 
-            if 'd' in option:
-                for opt in recommend_options:
-                    if opt in option:
-                        recommend_options.remove(opt)
-
-                if recommend_options:
-                    logger.error("It seems like you're facing issues with Apktool.\n"
-                                 "I would suggest considering the '%s' options or opting for a hands-on approach "
-                                 "by using the '--skip-decompile' option.", ", ".join(recommend_options))
-                else:
-                    logger.error("Try decompile the APK manually using the '--skip-decompile' option.")
-
-            raise subprocess.CalledProcessError(process.returncode, cmd,
-                                                sys.stdout, sys.stderr)
+            raise subprocess.CalledProcessError(process.returncode, cmd, sys.stdout, sys.stderr)
         return True
 
 def download_gadget(arch: str):
@@ -461,7 +444,16 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
     if apktool_path:
         global APKTOOL
         APKTOOL = apktool_path
-        logger.info("Using custom apktool path: %s", APKTOOL)
+        apktool_parts = APKTOOL.split()
+        apktool_binary = apktool_parts[-1]
+        if not Path(apktool_binary).exists():
+            logger.error("The specified apktool path does not exist: %s", apktool_binary)
+            sys.exit(-1)
+
+        if len(apktool_parts) > 1:
+            logger.info("Using custom apktool command: '%s'", APKTOOL)
+        else:
+            logger.info("Using custom apktool path: '%s'", APKTOOL)
 
     logger.info("Gadget Architecture(--arch): %s%s", arch, "(default)" if arch == "arm64" else "")
 
@@ -502,7 +494,13 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         if no_res:
             decompile_option += ['--no-res']
         if decompile_opts:
+            if "--no-res" in decompile_option:
+                if no_res:
+                    # remove no-res option if it's already in the list
+                    decompile_option.remove("--no-res")
+                no_res = True
             decompile_option += decompile_opts.split()
+
         run_apktool(decompile_option, str(apk_path.resolve()))
     else:
         if not decompiled_path.exists():
