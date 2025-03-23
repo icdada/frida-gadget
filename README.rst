@@ -78,7 +78,7 @@ How do I begin?
       [DEBUG] Checking internet permission and extractNativeLibs settings
       [DEBUG] Adding 'android.permission.INTERNET' permission to AndroidManifest.xml
       [DEBUG] Searching for the main activity in the smali files
-      [DEBUG] Found the main activity at '[REDACTED]/frida-gadget/tests/demo-apk/handtrackinggpu/smali/com/google/mediapipe/apps/handtrackinggpu/MainActivity.smali'
+      [DEBUG] Found the main activity at '[REDACTED]/frida-gadget/tests/demo-apk/target/smali/com/google/mediap/apps/target/MainActivity.smali'
       [DEBUG] Locating the onCreate method and injecting the loadLibrary code
       [DEBUG] Recompiling the new APK using apktool
       ...
