@@ -68,9 +68,9 @@ How do I begin?
 
 .. code:: sh
 
-    $ frida-gadget handtrackinggpu.apk --sign
+    $ frida-gadget target.apk --sign
       [INFO] Auto-detected frida version: 16.1.3
-      [INFO] APK: '[REDACTED]/demo-apk/handtrackinggpu.apk'
+      [INFO] APK: '[REDACTED]/demo-apk/target.apk'
       [INFO] Auto-detected architecture via ADB: arm64-v8a # Alternatively, specify the architecture with --arch arm64
       [INFO] Gadget Architecture(--arch): arm64(default)
       [DEBUG] Decompiling the target APK using apktool
@@ -84,7 +84,7 @@ How do I begin?
       ...
       I: Building apk file...
       I: Copying unknown files/dir...
-      I: Built apk into: [REDACTED]/demo-apk/handtrackinggpu/dist/handtrackinggpu.apk
+      I: Built apk into: [REDACTED]/demo-apk/target/dist/target.apk
       [INFO] Success
       ...
 
@@ -174,7 +174,7 @@ How to Identify the Injection?
 
 .. code:: sh
 
-    $ unzip -l [REDACTED]/demo-apk/handtrackinggpu/dist/handtrackinggpu.apk | grep libfrida-gadget
+    $ unzip -l [REDACTED]/demo-apk/target/dist/target.apk | grep libfrida-gadget
       21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
 
 Contributing
