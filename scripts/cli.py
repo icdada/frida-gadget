@@ -472,6 +472,13 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
     if config and not Path(config).exists():
         logger.error("The specified configuration file does not exist: %s", config)
         sys.exit(-1)
+    elif config:
+        try:
+            with open(config, 'r') as f:
+                json.load(f)
+        except json.JSONDecodeError:
+            logger.error("The specified configuration file is not a valid JSON: %s", config)
+            sys.exit(-1)
 
     arch = arch.lower()
     supported_archs = ['arm', 'arm64', 'x86', 'x86_64']
