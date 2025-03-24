@@ -87,7 +87,7 @@ How do I begin?
 With Docker
 ~~~~~~~~~~~~~~~~~~
 | You can also use this tool with Docker. Here's how to use it:
-
+|
 | 1. First, pull the Docker image:
 |
 
@@ -103,7 +103,7 @@ With Docker
     docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/your-app.apk --arch arm64 --sign
 
 | Note: Replace ``your-app.apk`` with your actual APK filename. The patched APK will be created in the same directory as your original APK.
-
+|
 | For example, if your APK is named ``example.apk``:
 |
 
@@ -125,7 +125,7 @@ Device Architecture
 
     adb shell getprop ro.product.cpu.abi
 
-| This command will output the architecture of your device, such as ``arm64-v8a``, ``armeabi-v7a``, ``x86``, or ``x86_64``.
+| This command will output the architecture of your device, such as ``arm64-v8a``, ``armeabi-v7a``, ``x86``, ``x86_64`` or ``multi-arch``.
 
 | Example of automatic detection:
 |
@@ -146,6 +146,7 @@ Device Architecture
 Android Version Support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | The following table shows the minimum Frida version required for different Android versions:
+| (Note: This information may not be completely accurate)
 
 .. list-table::
    :header-rows: 1
@@ -180,7 +181,7 @@ Android Version Support
 
 How to Identify the Injection?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| You can observe the main activity to see the injected `loadLibrary` code.
+| You can observe the main activity to see the injected ``loadLibrary`` code.
 | Additionally, the Frida gadget library will be present in your APK.
 
 .. code:: sh
