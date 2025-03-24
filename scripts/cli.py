@@ -66,20 +66,27 @@ def run_apktool(option: list, apk_path: str):
             raise subprocess.CalledProcessError(process.returncode, cmd, sys.stdout, sys.stderr)
         return True
 
-def download_gadget(arch: str):
+def download_gadget(arch: str, frida_version: str = None):
     """Download the frida gadget library
 
     Args:
         arch (str): architecture of the device
+        frida_version (str): specific frida version to use
     """
-    logger.info("Auto-detected your frida version: %s", INSTALLED_FRIDA_VERSION)
-    frida_github = FridaGithub(INSTALLED_FRIDA_VERSION)
+    if frida_version:
+        logger.info("Using specified frida version: %s", frida_version)
+        version = frida_version
+    else:
+        logger.info("Auto-detected your frida version: %s", INSTALLED_FRIDA_VERSION)
+        version = INSTALLED_FRIDA_VERSION
+
+    frida_github = FridaGithub(version)
     assets = frida_github.get_assets()
-    file = f'frida-gadget-{INSTALLED_FRIDA_VERSION}-android-{arch}.so.xz'
+    file = f'frida-gadget-{version}-android-{arch}.so.xz'
     for asset in assets:
         if asset['name'] == file:
             logger.debug("Downloading the frida gadget library(%s) for %s",
-                         INSTALLED_FRIDA_VERSION,
+                         version,
                          arch)
             so_gadget_path = str(FILE_DIR.joinpath(file[:-3]))
             return frida_github.download_gadget_so(asset['browser_download_url'], so_gadget_path)
@@ -199,7 +206,7 @@ def modify_manifest(decompiled_path):
                             ':extractNativeLibs="true"')
     android_manifest.write_text(txt, encoding="utf-8")
 
-def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, main_activity:str = None, config:str = None, js:str = None, custom_gadget_name:str = None):
+def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, main_activity:str = None, config:str = None, js:str = None, custom_gadget_name:str = None, frida_version:str = None):
     """Inject frida gadget into an APK
 
     Args:
@@ -212,7 +219,7 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
         NotImplementedError: not implemented
     """
     apk = APK(apk_path)
-    gadget_path = download_gadget(arch) # Download gadget library
+    gadget_path = download_gadget(arch, frida_version) # Download gadget library
     gadget_name = Path(gadget_path).name
 
     # Apply custom gadget name if provided
@@ -408,30 +415,14 @@ def print_version(ctx, _, value):
 @click.option('--decompile-opts', default=None, help="Specify additional options for apktool decompile.")
 @click.option('--recompile-opts', default=None, help="Specify additional options for apktool recompile.")
 @click.option('--apktool-path', default=None, help="Specify the path or command to run apktool.")
+@click.option('--frida-version', default=None, help="Specify the Frida version to use.")
 @click.option('--version', is_flag=True, callback=print_version,
               expose_value=False, is_eager=True, help="Show the version and exit.")
 @click.argument('apk_path', type=click.Path(exists=True), required=True)
 def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         sign:bool, custom_gadget_name:str, js:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
-        decompile_opts: str, recompile_opts: str, apktool_path: str):
-    """Patch an APK with the Frida gadget library
-
-    Options:
-      --arch TEXT                  Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)
-      --config TEXT                Specify the Frida configuration file.
-      --js TEXT                    Specify the Frida gadget JavaScript file.
-      --custom-gadget-name TEXT    Specify a custom name for the Frida gadget.
-      --no-res                     Skip decoding resources.
-      --main-activity TEXT         Specify the main activity if known.
-      --sign                       Automatically sign the APK using uber-apk-signer.
-      --skip-decompile             Skip the decompilation step.
-      --skip-recompile             Skip the recompilation step.
-      --use-aapt2                  Use aapt2 instead of aapt for resource processing.
-      --decompile-opts TEXT        Specify additional options for apktool decompile.
-      --recompile-opts TEXT        Specify additional options for apktool recompile.
-      --apktool-path TEXT          Specify the path or command to run apktool.
-      --version                    Show the version and exit.
-    """
+        decompile_opts: str, recompile_opts: str, apktool_path: str, frida_version: str):
+    """Patch an APK with the Frida gadget library"""
     apk_path = Path(apk_path)
 
     logger.info("APK: '%s'", apk_path)
@@ -510,7 +501,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             sys.exit(-1)
 
     # Process if decompile is success
-    inject_gadget_into_apk(apk_path, arch, decompiled_path, no_res, main_activity, config, js, custom_gadget_name)
+    inject_gadget_into_apk(apk_path, arch, decompiled_path, no_res, main_activity, config, js, custom_gadget_name, frida_version)
 
     # Rebuild with apktool, print apk_path if process is success
     if not skip_recompile:
