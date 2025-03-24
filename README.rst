@@ -33,6 +33,7 @@ Prerequirement
 
 | For other operating systems, such as ``Windows``, you can refer to the `Install Guide <https://ibotpeaches.github.io/Apktool/install/>`_.
 
+
 Usage
 ------------
 
@@ -81,36 +82,127 @@ How do I begin?
       [DEBUG] Locating the onCreate method and injecting the loadLibrary code
       [DEBUG] Recompiling the new APK using apktool
       ...
-      I: Building apk file...
-      I: Copying unknown files/dir...
-      I: Built apk into: [REDACTED]/demo-apk/target/dist/target.apk
-      [INFO] Success
-      ...
+      [INFO] APK signing finished: ./target/dist/target-aligned-debugSigned.apk (72.78 MiB)
 
 With Docker
 ~~~~~~~~~~~~~~~~~~
-| Use the ``-v`` flag to bind the current directory to the ``/workspace/mount`` directory inside the Docker container.  
-| Ensure that your APK file is in the current directory, or replace ``$APK_DIRECTORY`` with the path to your APK file's location.
+| You can also use this tool with Docker. Here's how to use it:
+
+| 1. First, pull the Docker image:
 |
 
 .. code:: sh
 
-    APK_DIRECTORY=$PWD
-    APK_FILENAME=example.apk
-    docker run -v $APK_DIRECTORY/:/workspace/mount ksg97031/frida-gadget mount/$APK_FILENAME --arch arm64 --sign
+    docker pull ksg97031/frida-gadget
 
-    ...
-    # The patched APK will be located at $APK_DIRECTORY/example/dist/example.apk
+| 2. Mount your local directory containing the APK file to the container:
+|
 
+.. code:: sh
+
+    docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/your-app.apk --arch arm64 --sign
+
+| Note: Replace ``your-app.apk`` with your actual APK filename. The patched APK will be created in the same directory as your original APK.
+
+| For example, if your APK is named ``example.apk``:
+|
+
+.. code:: sh
+
+    docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/example.apk --arch arm64 --sign
+    # The patched APK will be located at ./example/dist/example.apk
+
+Compatibility
+----------------
+Device Architecture
+~~~~~~~~~~~~~~~~~~~~~~~
+| The tool automatically detects the device architecture when an ADB device is connected. You can also manually specify the architecture using the ``--arch`` option.
+|
+| To determine your device's architecture, connect your device and run the following command:
+|
+
+.. code:: sh
+
+    adb shell getprop ro.product.cpu.abi
+
+| This command will output the architecture of your device, such as ``arm64-v8a``, ``armeabi-v7a``, ``x86``, or ``x86_64``.
+
+| Example of automatic detection:
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --sign
+    [INFO] Auto-detected architecture via ADB: arm64-v8a
+
+| Example of manual specification:
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --arch arm64 --sign
+    [INFO] Gadget Architecture(--arch): arm64
+
+Android Version Support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| The following table shows the minimum Frida version required for different Android versions:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Android Version
+     - Minimum Frida Version
+     - Notes
+   * - Android 5.x ~ 7.x (Lollipop~Nougat)
+     - Frida 14.2+
+     - Support for older Android versions was improved in Frida 12.6. Frida 14.2 includes fixes for libc detection errors and restored Houdini (translator) support. Latest Frida (16.x) continues to support Android 5~7.
+   * - Android 8.0 ~ 8.1 (Oreo)
+     - Frida 12.6.6+
+     - Java API issues like Java.choose were resolved in Frida 12.6.3+. Java integration issues on 32-bit ARM devices were fixed in Frida 12.6.6. Frida 14.x and newer versions work stably on Oreo.
+   * - Android 9.0 (Pie)
+     - Frida 12.7+
+     - Frida was extensively tested on Pixel 3 (Android 9). Frida 12.x ~ 15.x versions work stably on AOSP-based Android 9. Latest Frida 16.x also supports Android 9. (For emulators, Google-provided Android 9 images for arm/arm64 are recommended.)
+   * - Android 10 (Q)
+     - Frida 14.2+
+     - While there were no major changes specific to Android 10, Frida 14.2+ is recommended for overall stability. Frida 14.2 includes various compatibility improvements for both pre and post Android 10 versions. Latest Frida 15.x and 16.x versions work without issues on Android 10.
+   * - Android 11 (R)
+     - Frida 14.2+
+     - Frida 14.2 includes modifications to address ART changes and ARM->x86 translation in Android 11. Frida 14.2 or higher is recommended for Android 11. Frida 15.x~16.x fully support Android 11. (May have separate issues on custom ROMs like Samsung.)
+   * - Android 12 (S)
+     - Frida 15.0+
+     - Official support for Android 12 was first added in Frida 15.0. Initial 15.0 version had minor compatibility issues, but Frida 15.1.23 includes several stability improvements for Android 12. Frida 15.1.23 or higher (preferably 15.2 or latest 16.x) is recommended for Android 12 devices.
+   * - Android 13 (T)
+     - Frida 15.1.23+
+     - Preliminary support for Android 13 was introduced in Frida 15.1.23, and support matured in Frida 16.x versions. Minimum Frida 15.1.23 is required for Android 13 devices, but using the latest Frida 16 version is recommended (includes fixes for Android 13's internal behavior changes).
+   * - Android 14 (UpsideDownCake)
+     - Frida 16.2.0+
+     - Due to ART structure changes in Android 14, initial Frida 16.0~16.1 versions had issues with Java hooking, but Frida 16.2.0 improved hooking support for Android 14. Frida 16.2 or higher is recommended for Android 14 (Frida 16.2 added support for Android 14's new ART entrypoints).
+
+How to Identify the Injection?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| You can observe the main activity to see the injected `loadLibrary` code.
+| Additionally, the Frida gadget library will be present in your APK.
+
+.. code:: sh
+
+    $ unzip -l [REDACTED]/demo-apk/target/dist/target.apk | grep libfrida-gadget
+      21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
 
 Tips
 ------------
 
-Bypass SSL Pinning or Root Detection on Non-Rooted Devices
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| To bypass SSL pinning, you can use the following steps:
+Specifying a Different Main Activity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| If the main activity is not automatically detected, you can specify it manually using the ``--main-activity`` option:
 |
-| 1. Download the `@akabe1/frida-multiple-unpinning <https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/>`_ or `@dzonerzy/fridantiroot <https://codeshare.frida.re/@dzonerzy/fridantiroot/>`_ (or merge them) script.
+
+.. code:: sh
+
+    $ frida-gadget target.apk --main-activity com.example.MainActivity --no-res --sign
+
+Creating Self-Contained SSL Bypass App with --js
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| 1. Download the `@akabe1/frida-multiple-unpinning <https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/>`_ script.
 | 2. Inject the script into the target application using the ``--js`` flag.
 
 .. code:: sh
@@ -140,41 +232,6 @@ Custom Apktool Options
 .. code:: sh
 
     $ frida-gadget target.apk --decompile-opts "--only-main-classes --no-res" --recompile-opts "--force-all" --sign
-
-Specifying a Different Main Activity
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| If the main activity is not automatically detected, you can specify it manually using the ``--main-activity`` option:
-|
-
-.. code:: sh
-
-    $ frida-gadget target.apk --main-activity com.example.MainActivity --no-res --sign
-
-How to know device architecture?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| Connect your device and run the following command:
-|
-
-.. code:: sh
-
-    adb shell getprop ro.product.cpu.abi
-
-| This command will output the architecture of your device, such as ``arm64-v8a``, ``armeabi-v7a``, ``x86``, or ``x86_64``.
-|
-| - Most modern Android emulators use the ``x86_64`` architecture.
-| - Newer high-end devices typically use ``arm64-v8a``.
-| - Older or lower-end devices might use ``armeabi-v7a``.
-| - Some specific emulators or devices may still use ``x86``.
-
-How to Identify the Injection?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| You can observe the main activity to see the injected `loadLibrary` code.
-| Additionally, the Frida gadget library will be present in your APK.
-
-.. code:: sh
-
-    $ unzip -l [REDACTED]/demo-apk/target/dist/target.apk | grep libfrida-gadget
-      21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
 
 Contributing
 -----------------
