@@ -206,6 +206,39 @@ def modify_manifest(decompiled_path):
                             ':extractNativeLibs="true"')
     android_manifest.write_text(txt, encoding="utf-8")
 
+def detect_apk_architectures(decompiled_path):
+    """Detect architectures from the APK's lib directory
+
+    Args:
+        decompiled_path (str): decompiled path of apk file
+
+    Returns:
+        list: List of detected architectures
+    """
+    lib_dir = decompiled_path.joinpath('lib')
+    if not lib_dir.exists():
+        logger.warning("No lib directory found in the APK. Returning default architecture (arm64).")
+        return ['arm64']
+    
+    arch_mapping = {
+        'arm64-v8a': 'arm64',
+        'armeabi-v7a': 'arm',
+        'x86': 'x86',
+        'x86_64': 'x86_64'
+    }
+    
+    detected_archs = []
+    for arch_dir in lib_dir.iterdir():
+        if arch_dir.is_dir() and arch_dir.name in arch_mapping:
+            detected_archs.append(arch_mapping[arch_dir.name])
+    
+    if not detected_archs:
+        logger.warning("No supported architectures found in the APK. Returning default architecture (arm64).")
+        return ['arm64']
+    
+    logger.info("Detected architectures in APK: %s", ", ".join(detected_archs))
+    return detected_archs
+
 def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, main_activity:str = None, config:str = None, js:str = None, custom_gadget_name:str = None, frida_version:str = None):
     """Inject frida gadget into an APK
 
@@ -219,15 +252,15 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
         NotImplementedError: not implemented
     """
     apk = APK(apk_path)
-    gadget_path = download_gadget(arch, frida_version) # Download gadget library
-    gadget_name = Path(gadget_path).name
-
-    # Apply custom gadget name if provided
-    if custom_gadget_name:
-        custom_gadget_name += ".so"
-        logger.info("Using custom gadget name: %s", custom_gadget_name)
-        gadget_name = custom_gadget_name
-
+    
+    # Handle 'multi-arch' option
+    if arch == 'multi-arch':
+        archs = detect_apk_architectures(decompiled_path)
+        logger.info("Using multiple architectures detected from APK: %s", ", ".join(archs))
+    else:
+        archs = [arch]
+    
+    # Get main activity if not provided
     if not main_activity:
         main_activity = get_main_activity(apk)
         if main_activity == -1: # multiple main activities
@@ -243,93 +276,114 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
                         "Please specify the main activity using the --main-activity option.\n"
                         "Select the activity from %s", apk.get_activities())
             sys.exit(-1)
+    
     if not no_res:
         # Apply permission to android manifest
         modify_manifest(decompiled_path)
-
-    # Search the main activity from smali files
-    load_library_name = gadget_name[:-3]
-    insert_loadlibary(decompiled_path, main_activity, load_library_name)
-
-    # Copy the frida gadget library to the lib directory
-    lib = decompiled_path.joinpath('lib')
-    if not lib.exists():
-        lib.mkdir()
-    arch_dirnames = {'arm': 'armeabi-v7a', 'x86':'x86', 'arm64': 'arm64-v8a', 'x86_64':'x86_64'}
-    if arch not in arch_dirnames:
-        raise NotImplementedError(f"The architecture '{arch}' is not supported.")
-
-    arch_dirname = arch_dirnames[arch]
-    lib = lib.joinpath(arch_dirname)
-    if not lib.exists():
-        lib.mkdir()
-
-    lib_library_name = gadget_name
-    if not lib_library_name.startswith('lib'):
-        lib_library_name = 'lib' + gadget_name
-    shutil.copy(gadget_path, lib.joinpath(lib_library_name))
-
-
-    # Upload gadget config and js files
-    upload_files = {'config': config, 'script': js}
-
-    if js and config:
-        with open(config, 'r') as f:
-            contents = f.read()
-            config_data = json.loads(contents)
-            if "interaction" not in config_data:
-                logger.error("The config file must contain an 'interaction' key.")
-                sys.exit(-1)
-            if "path" in config_data["interaction"]:
-                logger.debug("Updating the script path in '%s' from '%s' to 'lib%s.script.so'",
-                             config, config_data["interaction"]["path"], load_library_name)
-            config_data["interaction"]["path"] = f"lib{load_library_name}.script.so"
-            with open(lib.joinpath(f"lib{load_library_name}.config.so"), 'w') as f:
-                f.write(json.dumps(config_data, indent=4))
+    
+    # Download gadget libraries for all architectures and prepare the first one for loadLibrary
+    first_gadget_path = None
+    first_gadget_name = None
+    
+    for current_arch in archs:
+        gadget_path = download_gadget(current_arch, frida_version)
+        gadget_name = Path(gadget_path).name
+        
+        # Apply custom gadget name if provided
+        if custom_gadget_name:
+            custom_gadget_name_with_ext = custom_gadget_name + ".so"
+            logger.info("Using custom gadget name: %s", custom_gadget_name_with_ext)
+            gadget_name = custom_gadget_name_with_ext
+        
+        # Save the first gadget info for loadLibrary
+        if first_gadget_path is None:
+            first_gadget_path = gadget_path
+            first_gadget_name = gadget_name
+        
+        # Copy the frida gadget library to the lib directory
+        lib = decompiled_path.joinpath('lib')
+        if not lib.exists():
+            lib.mkdir()
+        
+        arch_dirnames = {'arm': 'armeabi-v7a', 'x86':'x86', 'arm64': 'arm64-v8a', 'x86_64':'x86_64'}
+        if current_arch not in arch_dirnames:
+            raise NotImplementedError(f"The architecture '{current_arch}' is not supported.")
+        
+        arch_dirname = arch_dirnames[current_arch]
+        lib_arch_dir = lib.joinpath(arch_dirname)
+        if not lib_arch_dir.exists():
+            lib_arch_dir.mkdir()
+        
+        lib_library_name = gadget_name
+        if not lib_library_name.startswith('lib'):
+            lib_library_name = 'lib' + gadget_name
+        
+        shutil.copy(gadget_path, lib_arch_dir.joinpath(lib_library_name))
+        
+        # Upload gadget config and js files for each architecture
+        upload_files = {'config': config, 'script': js}
+        load_library_name = gadget_name[:-3]
+        
+        if js and config:
+            with open(config, 'r') as f:
+                contents = f.read()
+                config_data = json.loads(contents)
+                if "interaction" not in config_data:
+                    logger.error("The config file must contain an 'interaction' key.")
+                    sys.exit(-1)
+                if "path" in config_data["interaction"]:
+                    logger.debug("Updating the script path in '%s' from '%s' to 'lib%s.script.so'",
+                                config, config_data["interaction"]["path"], load_library_name)
+                config_data["interaction"]["path"] = f"lib{load_library_name}.script.so"
+                with open(lib_arch_dir.joinpath(f"lib{load_library_name}.config.so"), 'w') as f:
+                    f.write(json.dumps(config_data, indent=4))
+                del upload_files['config']
+        elif js:
+            config_name = f"lib{load_library_name}.config.so"
+            with open(lib_arch_dir.joinpath(config_name), 'w') as f:
+                contents = """\
+                \r{
+                \r    "interaction": {
+                \r        "type": "script",
+                \r        "path": \"lib"""+load_library_name+""".script.so"
+                \r    }
+                \r}
+                """
+                f.write(contents)
+                logger.debug("Created the default config file: %s", config_name)
+                logger.debug(contents)
             del upload_files['config']
-    elif js:
-        config_name = f"lib{load_library_name}.config.so"
-        with open(lib.joinpath(config_name), 'w') as f:
-            contents = """\
-            \r{
-            \r    "interaction": {
-            \r        "type": "script",
-            \r        "path": \"lib"""+load_library_name+""".script.so",
-            \r        "on_change": "reload"
-            \r    } 
-            \r}
-            """
-            f.write(contents)
-            logger.debug("Created the default config file: %s", config_name)
-            logger.debug(contents)
-        del upload_files['config']
-    elif config:
-        logger.warning("The '%s' config file was provided without the script file.", config)
-        logger.warning("To upload the script file to the APK, please provide the --js option.")
-        with open(config, 'r') as f:
-            contents = f.read()
-            config_data = json.loads(contents)
-            if "interaction" not in config_data:
-                logger.error("The config file must contain an 'interaction' key.")
-                sys.exit(-1)
-            if "path" not in config_data["interaction"]:
-                logger.error("The config file must contain a 'path' key.")
-                sys.exit(-1)
-            logger.warning("The script file must be located at '%s' on your device", config_data["interaction"]["path"])
-
-    for file_type, file_path in upload_files.items():
-        if file_path:
-            file_path = Path(file_path)
-            if not file_path.exists():
-                logger.error("Frida %s file not found: %s", file_type, file_path)
-                sys.exit(-1)
-            else:
-                target_name = f"lib{load_library_name}.{file_type}.so"
-                if file_path.name == target_name:
-                    logger.debug("Uploading Frida %s file: %s", file_type, file_path.name)
+        elif config:
+            logger.warning("The '%s' config file was provided without the script file.", config)
+            logger.warning("To upload the script file to the APK, please provide the --js option.")
+            with open(config, 'r') as f:
+                contents = f.read()
+                config_data = json.loads(contents)
+                if "interaction" not in config_data:
+                    logger.error("The config file must contain an 'interaction' key.")
+                    sys.exit(-1)
+                if "path" not in config_data["interaction"]:
+                    logger.error("The config file must contain a 'path' key.")
+                    sys.exit(-1)
+                logger.warning("The script file must be located at '%s' on your device", config_data["interaction"]["path"])
+        
+        for file_type, file_path in upload_files.items():
+            if file_path:
+                file_path = Path(file_path)
+                if not file_path.exists():
+                    logger.error("Frida %s file not found: %s", file_type, file_path)
+                    sys.exit(-1)
                 else:
-                    logger.debug("Renaming and uploading Frida %s file: %s -> %s", file_type, file_path.name, target_name)
-                shutil.copy(file_path, lib.joinpath(target_name))
+                    target_name = f"lib{load_library_name}.{file_type}.so"
+                    if file_path.name == target_name:
+                        logger.debug("Uploading Frida %s file: %s", file_type, file_path.name)
+                    else:
+                        logger.debug("Renaming and uploading Frida %s file: %s -> %s", file_type, file_path.name, target_name)
+                    shutil.copy(file_path, lib_arch_dir.joinpath(target_name))
+    
+    # Insert loadLibrary code using the first gadget
+    load_library_name = first_gadget_name[:-3]
+    insert_loadlibary(decompiled_path, main_activity, load_library_name)
 
 def sign_apk(apk_path:str):
     """Run uber apk signer with option
@@ -402,7 +456,7 @@ def print_version(ctx, _, value):
 
 # pylint: disable=too-many-arguments
 @click.command()
-@click.option('--arch', default=None, help="Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)")
+@click.option('--arch', default=None, help="Specify the target architecture of the device. (options: arm64, x86_64, arm, x86, multi-arch)")
 @click.option('--config', help="Specify the Frida configuration file.")
 @click.option('--js', default=None, help="Specify the Frida gadget JavaScript file.")
 @click.option('--custom-gadget-name', default=None, help="Specify a custom name for the Frida gadget.")
@@ -428,8 +482,11 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
     logger.info("APK: '%s'", apk_path)
     if arch is None:
         arch = detect_adb_arch()
-
-    if arch == 'arm64-v8a':
+    elif arch.lower() == 'multi-arch':
+        if skip_decompile:
+            logger.warning("The 'multi-arch' option requires decompiling the APK first to detect architectures")
+        arch = 'multi-arch'
+    elif arch == 'arm64-v8a':
         arch = 'arm64'
     elif arch == 'armeabi-v7a':
         arch = 'arm'
@@ -448,7 +505,10 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
         else:
             logger.info("Using custom apktool path: '%s'", APKTOOL)
 
-    logger.info("Gadget Architecture(--arch): %s%s", arch, "(default)" if arch == "arm64" else "")
+    if arch != 'multi-arch':
+        logger.info("Gadget Architecture(--arch): %s%s", arch, "(default)" if arch == "arm64" else "")
+    else:
+        logger.info("Gadget Architecture(--arch): %s (will inject for all architectures found in APK)", arch)
 
     if js and not Path(js).exists():
         logger.error("The specified JavaScript file does not exist: %s", js)
@@ -465,14 +525,15 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             logger.error("The specified configuration file is not a valid JSON: %s", config)
             sys.exit(-1)
 
-    arch = arch.lower()
-    supported_archs = ['arm', 'arm64', 'x86', 'x86_64']
-    if arch not in supported_archs:
-        logger.error(
-            "The --arch option only supports the following architectures: %s",
-            ", ".join(supported_archs)
-        )
-        sys.exit(-1)
+    if arch != 'multi-arch':
+        arch = arch.lower()
+        supported_archs = ['arm', 'arm64', 'x86', 'x86_64']
+        if arch not in supported_archs:
+            logger.error(
+                "The --arch option only supports the following architectures: %s, multi-arch",
+                ", ".join(supported_archs)
+            )
+            sys.exit(-1)
 
     # Make temp directory for decompile
     decompiled_path = TEMP_DIR.joinpath(str(apk_path.resolve())[:-4])
