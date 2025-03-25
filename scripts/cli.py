@@ -33,9 +33,6 @@ TEMP_DIR = ROOT_DIR.joinpath('temp')
 FILE_DIR = ROOT_DIR.joinpath('files')
 
 APKTOOL = which("apktool")
-if not APKTOOL:
-    raise FileNotFoundError(
-        "Please download the 'apktool' and set it to your PATH environment.")
 
 def run_apktool(option: list, apk_path: str):
     """Run apktool with option
@@ -491,8 +488,9 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
     elif arch == 'armeabi-v7a':
         arch = 'arm'
 
+
+    global APKTOOL
     if apktool_path:
-        global APKTOOL
         APKTOOL = apktool_path
         apktool_parts = APKTOOL.split()
         apktool_binary = apktool_parts[-1]
@@ -504,6 +502,15 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             logger.info("Using custom apktool command: '%s'", APKTOOL)
         else:
             logger.info("Using custom apktool path: '%s'", APKTOOL)
+    else:
+        if not APKTOOL:
+            raise FileNotFoundError(
+                "apktool not found. Please install apktool and add it to your PATH environment.\n"
+                "For macOS: brew install apktool\n"
+                "For Windows: Download from https://ibotpeaches.github.io/Apktool/install/\n"
+                "For Linux: sudo apt-get install apktool\n"
+                "After installation, you may need to restart your terminal."
+            )
 
     if arch != 'multi-arch':
         logger.info("Gadget Architecture(--arch): %s%s", arch, "(default)" if arch == "arm64" else "")
