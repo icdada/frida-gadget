@@ -48,6 +48,7 @@ Usage
          --arch TEXT                Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)
          --config TEXT              Specify the Frida configuration file.
          --js TEXT                  Specify the Frida gadget JavaScript file.
+         --js-delay INTEGER         Specify seconds to wait before executing the JavaScript file.
          --custom-gadget-name TEXT  Specify a custom name for the Frida gadget.
          --no-res                   Skip decoding resources.
          --main-activity TEXT       Specify the main activity if known.
@@ -58,6 +59,7 @@ Usage
          --decompile-opts TEXT      Specify additional options for apktool decompile.
          --recompile-opts TEXT      Specify additional options for apktool recompile.
          --apktool-path TEXT        Specify the path or command to run apktool.
+         --frida-version TEXT       Specify the Frida version to use.
          --version                  Show the version and exit.
          --help                     Show this message and exit.
 
@@ -212,6 +214,22 @@ Creating Self-Contained SSL Bypass App with --js
 
 | 3. Run the injected application on your device or emulator.
 | 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
+
+| Note: If the app crashes, try adding ``--js-delay 2`` to delay script execution:
+
+.. code:: sh
+
+    frida-gadget target.apk --js frida-multiple-unpinning.js --js-delay 2 --sign --no-res
+
+| This gives the app time to initialize before applying hooks.
+|
+| You can also specify a custom Frida version using ``--frida-version``:
+
+.. code:: sh
+
+    frida-gadget target.apk --js frida-multiple-unpinning.js --frida-version 16.1.3 --sign --no-res
+
+| This is useful when you need to use a specific Frida version for compatibility reasons.
 
 Using a Custom Apktool
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
