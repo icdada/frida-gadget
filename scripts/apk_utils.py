@@ -1,4 +1,5 @@
 from androguard.core.apk import APK
+
 from .logger import logger
 
 def get_main_activity(apk:APK):

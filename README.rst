@@ -49,6 +49,7 @@ Usage
          --config TEXT              Specify the Frida configuration file.
          --js TEXT                  Specify the Frida gadget JavaScript file.
          --js-delay INTEGER         Specify seconds to wait before executing the JavaScript file.
+         --force-manifest           Force modify AndroidManifest.xml even if it already has required permissions.
          --custom-gadget-name TEXT  Specify a custom name for the Frida gadget.
          --no-res                   Skip decoding resources.
          --main-activity TEXT       Specify the main activity if known.
@@ -214,7 +215,7 @@ Creating Self-Contained SSL Bypass App with --js
 
 | 3. Run the injected application on your device or emulator.
 | 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
-|
+
 | Note: If the app crashes, try adding ``--js-delay 2`` to delay script execution:
 
 .. code:: sh
@@ -230,6 +231,14 @@ Creating Self-Contained SSL Bypass App with --js
     frida-gadget target.apk --js frida-multiple-unpinning.js --frida-version 16.1.3 --sign --no-res
 
 | This is useful when you need to use a specific Frida version for compatibility reasons.
+|
+| If you need to force modify AndroidManifest.xml (e.g., when permissions are not being added correctly), use ``--force-manifest``:
+
+.. code:: sh
+
+    frida-gadget target.apk --js frida-multiple-unpinning.js --force-manifest --sign --no-res
+
+| This will ensure that required permissions and settings are added to the manifest, even if they already exist.
 
 Using a Custom Apktool
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

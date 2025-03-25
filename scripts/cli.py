@@ -236,7 +236,7 @@ def detect_apk_architectures(decompiled_path):
     logger.info("Detected architectures in APK: %s", ", ".join(detected_archs))
     return detected_archs
 
-def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, main_activity:str = None, config:str = None, js:str = None, custom_gadget_name:str = None, frida_version:str = None):
+def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, force_manifest, main_activity:str = None, config:str = None, js:str = None, custom_gadget_name:str = None, frida_version:str = None):
     """Inject frida gadget into an APK
 
     Args:
@@ -273,9 +273,9 @@ def inject_gadget_into_apk(apk_path:str, arch:str, decompiled_path:str, no_res, 
                         "Please specify the main activity using the --main-activity option.\n"
                         "Select the activity from %s", apk.get_activities())
             sys.exit(-1)
-    
-    if not no_res:
-        # Apply permission to android manifest
+
+    # Apply permission to android manifest
+    if not no_res or force_manifest:
         modify_manifest(decompiled_path)
     
     # Download gadget libraries for all architectures and prepare the first one for loadLibrary
@@ -471,6 +471,7 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
 @click.option('--config', help="Specify the Frida configuration file.")
 @click.option('--js', default=None, help="Specify the Frida gadget JavaScript file.")
 @click.option('--js-delay', type=int, help="Specify seconds to wait before executing the JavaScript file.")
+@click.option('--force-manifest', is_flag=True, help="Force modify AndroidManifest.xml even if it already has required permissions.")
 @click.option('--custom-gadget-name', default=None, help="Specify a custom name for the Frida gadget.")
 @click.option('--no-res', is_flag=True, help="Skip decoding resources.")
 @click.option('--main-activity', default=None, help="Specify the main activity if known.")
@@ -486,7 +487,7 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
               expose_value=False, is_eager=True, help="Show the version and exit.")
 @click.argument('apk_path', type=click.Path(exists=True), required=True)
 def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
-        sign:bool, custom_gadget_name:str, js:str, js_delay:int, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
+        sign:bool, custom_gadget_name:str, js:str, js_delay:int, force_manifest:bool, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
         decompile_opts: str, recompile_opts: str, apktool_path: str, frida_version: str):
     """Patch an APK with the Frida gadget library"""
     apk_path = Path(apk_path)
@@ -596,6 +597,8 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
 
         # APK decompile with apktool
         decompile_option = ['d', '-o', str(decompiled_path.resolve()), '-f']
+        if force_manifest:
+            decompile_option += ['--force-manifest']
         if no_res:
             decompile_option += ['--no-res']
         if decompile_opts:
@@ -613,7 +616,7 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             sys.exit(-1)
 
     # Process if decompile is success
-    inject_gadget_into_apk(apk_path, arch, decompiled_path, no_res, main_activity, config, js, custom_gadget_name, frida_version)
+    inject_gadget_into_apk(apk_path, arch, decompiled_path, no_res, force_manifest, main_activity, config, js, custom_gadget_name, frida_version)
 
     # Rebuild with apktool, print apk_path if process is success
     if not skip_recompile:
