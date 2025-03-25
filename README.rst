@@ -214,7 +214,7 @@ Creating Self-Contained SSL Bypass App with --js
 
 | 3. Run the injected application on your device or emulator.
 | 4. Observe the network traffic using a proxy tool such as `Burp Suite <https://portswigger.net/burp>`_ or `Caido <https://caido.io/>`_.
-
+|
 | Note: If the app crashes, try adding ``--js-delay 2`` to delay script execution:
 
 .. code:: sh
