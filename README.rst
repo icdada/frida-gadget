@@ -231,14 +231,6 @@ Creating Self-Contained SSL Bypass App with --js
     frida-gadget target.apk --js frida-multiple-unpinning.js --frida-version 16.1.3 --sign --no-res
 
 | This is useful when you need to use a specific Frida version for compatibility reasons.
-|
-| If you need to force modify AndroidManifest.xml (e.g., when permissions are not being added correctly), use ``--force-manifest``:
-
-.. code:: sh
-
-    frida-gadget target.apk --js frida-multiple-unpinning.js --force-manifest --sign --no-res
-
-| This will ensure that required permissions and settings are added to the manifest, even if they already exist.
 
 Using a Custom Apktool
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
