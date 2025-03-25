@@ -451,11 +451,26 @@ def print_version(ctx, _, value):
     print(f"frida-gadget version {__version__}")
     ctx.exit()
 
+def wrap_js_with_timeout(js_content: str, delay: int) -> str:
+    """Wrap JavaScript content with setTimeout
+
+    Args:
+        js_content (str): Original JavaScript content
+        delay (int): Seconds to wait before executing
+
+    Returns:
+        str: Wrapped JavaScript content
+    """
+    return f"""setTimeout(function() {{
+{js_content}
+}}, {delay * 1000});"""
+
 # pylint: disable=too-many-arguments
 @click.command()
 @click.option('--arch', default=None, help="Specify the target architecture of the device. (options: arm64, x86_64, arm, x86, multi-arch)")
 @click.option('--config', help="Specify the Frida configuration file.")
 @click.option('--js', default=None, help="Specify the Frida gadget JavaScript file.")
+@click.option('--js-delay', type=int, help="Specify seconds to wait before executing the JavaScript file.")
 @click.option('--custom-gadget-name', default=None, help="Specify a custom name for the Frida gadget.")
 @click.option('--no-res', is_flag=True, help="Skip decoding resources.")
 @click.option('--main-activity', default=None, help="Specify the main activity if known.")
@@ -471,7 +486,7 @@ def print_version(ctx, _, value):
               expose_value=False, is_eager=True, help="Show the version and exit.")
 @click.argument('apk_path', type=click.Path(exists=True), required=True)
 def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
-        sign:bool, custom_gadget_name:str, js:str, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
+        sign:bool, custom_gadget_name:str, js:str, js_delay:int, skip_decompile:bool, skip_recompile:bool, use_aapt2:bool,
         decompile_opts: str, recompile_opts: str, apktool_path: str, frida_version: str):
     """Patch an APK with the Frida gadget library"""
     apk_path = Path(apk_path)
@@ -488,6 +503,35 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
     elif arch == 'armeabi-v7a':
         arch = 'arm'
 
+    # Validate js-delay option
+    if js_delay is not None:
+        if js is None:
+            logger.error("The --js-delay option requires --js option to be specified.")
+            sys.exit(-1)
+        if js_delay < 0:
+            logger.error("Delay value must be a positive number.")
+            sys.exit(-1)
+        logger.info("JavaScript execution will be delayed by %d seconds", js_delay)
+
+    # Process JavaScript file with delay if specified
+    if js and js_delay is not None:
+        js_path = Path(js)
+        if not js_path.exists():
+            logger.error("The specified JavaScript file does not exist: %s", js)
+            sys.exit(-1)
+        
+        try:
+            original_content = js_path.read_text()
+            wrapped_content = wrap_js_with_timeout(original_content, js_delay)
+            
+            # Create a temporary file with wrapped content
+            temp_js = js_path.parent / f"{js_path.stem}_wrapped{js_path.suffix}"
+            temp_js.write_text(wrapped_content)
+            js = str(temp_js)
+            logger.debug("Created wrapped JavaScript file: %s", js)
+        except Exception as e:
+            logger.error("Failed to process JavaScript file: %s", str(e))
+            sys.exit(-1)
 
     global APKTOOL
     if apktool_path:
@@ -587,6 +631,16 @@ def run(apk_path: str, arch: str, config: str, no_res:bool, main_activity: str,
             logger.error("APK not found: %s", apk_path)
         else:
             logger.info("Frida gadget injected into APK: %s", apk_path)
+
+        # Clean up wrapped JavaScript file if it exists
+        if js and js_delay is not None:
+            temp_js = Path(js)
+            if temp_js.exists() and temp_js.name.endswith('_wrapped.js'):
+                try:
+                    temp_js.unlink()
+                    logger.debug("Cleaned up wrapped JavaScript file: %s", temp_js)
+                except Exception as e:
+                    logger.warning("Failed to clean up wrapped JavaScript file: %s", str(e))
 
         if sign:
             logger.debug('Starting APK signing using uber-apk-signer')
