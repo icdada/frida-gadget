@@ -12,10 +12,13 @@ It provides various functionalities including:
 """
 
 import os
+import re
 import sys
 import shutil
 import subprocess
 import json
+import tempfile
+import zipfile
 from shutil import which
 from pathlib import Path
 import click
@@ -123,12 +126,15 @@ def insert_loadlibary(decompiled_path, main_activity, load_library_name):
     """
     logger.debug("Searching for the main activity in the smali files")
     target_smali = None
+    target_smali_class_number = None
 
     target_relative_path = main_activity.replace(".", os.sep)
     for directory in decompiled_path.iterdir():
         if directory.is_dir() and directory.name.startswith("smali"):
             target_smali = directory.joinpath(target_relative_path + ".smali")
             if target_smali.exists():
+                if directory.name.startswith("smali_classes"):
+                    target_smali_class_number = int(directory.name.split("smali_classes")[1])
                 break
 
     if not target_smali or not target_smali.exists():
@@ -184,7 +190,7 @@ def insert_loadlibary(decompiled_path, main_activity, load_library_name):
 
     # Replace the smali file with the new one
     target_smali.write_text("\n".join(text))
-
+    return target_smali_class_number
 
 def modify_manifest(decompiled_path):
     """Modify manifest permssions
@@ -437,7 +443,7 @@ def inject_gadget_into_apk(
                         )
                     shutil.copy(file_path, lib_arch_dir.joinpath(target_name))
 
-    insert_loadlibary(decompiled_path, main_activity, load_library_name)
+    return insert_loadlibary(decompiled_path, main_activity, load_library_name)
 
 
 def sign_apk(apk_path: str):
@@ -750,7 +756,7 @@ def run(
         decompiled_path.mkdir()
 
         # APK decompile with apktool
-        decompile_option = ["d", "-o", str(decompiled_path.resolve()), "-f"]
+        decompile_option = ["d", "-o", str(decompiled_path.resolve()), "--force"]
         if force_manifest:
             decompile_option += ["--force-manifest"]
         if no_res:
@@ -770,7 +776,7 @@ def run(
             sys.exit(-1)
 
     # Process if decompile is success
-    inject_gadget_into_apk(
+    modified_dex_number = inject_gadget_into_apk(
         apk_path,
         arch,
         decompiled_path,
@@ -794,11 +800,11 @@ def run(
             recompile_option += recompile_opts.split()
 
         run_apktool(recompile_option, str(decompiled_path.resolve()))
-        apk_path = decompiled_path.joinpath("dist", apk_path.name)
-        if not apk_path.exists():
-            logger.error("APK not found: %s", apk_path)
+        recompiled_apk_path = decompiled_path.joinpath("dist", apk_path.name)
+        if not recompiled_apk_path.exists():
+            logger.error("APK not found: %s", recompiled_apk_path)
         else:
-            logger.info("Frida gadget injected into APK: %s", apk_path)
+            logger.info("Frida gadget injected into APK: %s", recompiled_apk_path)
 
         # Clean up wrapped JavaScript file if it exists
         if js and js_delay is not None:
@@ -812,9 +818,54 @@ def run(
                         "Failed to clean up wrapped JavaScript file: %s", str(e)
                     )
 
+        # Copy original dex files except the modified one to the recompiled APK
+        logger.debug(f"Copying original dex files (except modified one {modified_dex_number}) to the recompiled APK")
+        try:
+            # Create a temporary directory for extraction
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_dir_path = Path(temp_dir)
+                
+                # Extract original APK
+                original_apk_zip = zipfile.ZipFile(apk_path, 'r')
+                original_apk_zip.extractall(temp_dir_path)
+                original_apk_zip.close()
+                
+                # Create a temporary file for the recompiled APK
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    temp_file_path = Path(temp_file.name)
+                
+                # Open recompiled APK for reading
+                recompiled_apk = zipfile.ZipFile(recompiled_apk_path, 'r')
+                
+                # Create a new ZIP file
+                new_apk = zipfile.ZipFile(temp_file_path, 'w')
+                
+                # Copy all files from recompiled APK except dex files
+                modified_dex_filename = f"classes{modified_dex_number}.dex" if modified_dex_number > 1 else "classes.dex"
+
+                for item in recompiled_apk.infolist():
+                    if item.filename == modified_dex_filename:
+                        logger.debug(f"Copying {item.filename} from recompiled APK")
+                        new_apk.writestr(item, recompiled_apk.read(item.filename))
+                    elif item.filename.startswith('classes') and item.filename.endswith('.dex'):
+                        dex_file = temp_dir_path.joinpath(item.filename)
+                        new_apk.write(str(dex_file), dex_file.name)
+                    else:
+                        new_apk.writestr(item, recompiled_apk.read(item.filename))
+
+                # Close all zip files
+                recompiled_apk.close()
+                new_apk.close()
+                
+                # Replace the recompiled APK with the new one
+                shutil.move(temp_file_path, recompiled_apk_path)
+                logger.info("Successfully replaced dex files in the recompiled APK")
+        except Exception as e:
+            logger.error(f"Failed to copy original dex files: {str(e)}")
+
         if sign:
             logger.debug("Starting APK signing using uber-apk-signer")
-            sign_apk(str(apk_path))
+            sign_apk(str(recompiled_apk_path))
             return
     else:
         logger.info(apk_path)
