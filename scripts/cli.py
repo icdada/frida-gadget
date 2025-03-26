@@ -841,7 +841,8 @@ def run(
                 new_apk = zipfile.ZipFile(temp_file_path, 'w')
                 
                 # Copy all files from recompiled APK except dex files
-                modified_dex_filename = f"classes{modified_dex_number}.dex" if modified_dex_number > 1 else "classes.dex"
+                modified_dex_filename = f"classes{modified_dex_number}.dex" \
+                    if modified_dex_number and modified_dex_number > 1 else "classes.dex"
 
                 for item in recompiled_apk.infolist():
                     if item.filename == modified_dex_filename:
