@@ -626,9 +626,9 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
 )
 @click.option("--frida-version", default=None, help="Specify the Frida version to use.")
 @click.option("--ks", default=None, help="The keystore file. If not provided, will use debug keystore.")
-@click.option("--ksAlias", default=None, help="The alias of the used key in the keystore.")
-@click.option("--ksKeyPass", default=None, help="The password for the key.")
-@click.option("--ksPass", default=None, help="The password for the keystore.")
+@click.option("--ks-alias", default=None, help="The alias of the used key in the keystore.")
+@click.option("--ks-key-pass", default=None, help="The password for the key.")
+@click.option("--ks-pass", default=None, help="The password for the keystore.")
 @click.option(
     "--version",
     is_flag=True,

@@ -61,6 +61,10 @@ Usage
          --recompile-opts TEXT      Specify additional options for apktool recompile.
          --apktool-path TEXT        Specify the path or command to run apktool.
          --frida-version TEXT       Specify the Frida version to use.
+         --ks TEXT                  The keystore file. If not provided, will use debug keystore.
+         --ks-alias TEXT            The alias of the used key in the keystore.
+         --ks-key-pass TEXT         The password for the key.
+         --ks-pass TEXT             The password for the keystore.
          --version                  Show the version and exit.
          --help                     Show this message and exit.
 
