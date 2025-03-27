@@ -446,17 +446,34 @@ def inject_gadget_into_apk(
     return insert_loadlibary(decompiled_path, main_activity, load_library_name)
 
 
-def sign_apk(apk_path: str):
+def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: str = None, ks_pass: str = None):
     """Run uber apk signer with option
 
     Args:
         apk_path (str): path of apk file
-
+        ks (str): keystore file path
+        ks_alias (str): keystore alias
+        ks_key_pass (str): key password
+        ks_pass (str): keystore password
     """
     signer_path = download_signer()  # Download apk signer
 
     pipe = subprocess.PIPE
     cmd = ["java", "-jar", signer_path, "--apks", apk_path]
+    
+    if ks:
+        cmd.append("--ks")
+        cmd.append(ks)
+    if ks_alias:
+        cmd.append("--ksAlias")
+        cmd.append(ks_alias)
+    if ks_key_pass:
+        cmd.append("--ksKeyPass")
+        cmd.append(ks_key_pass)
+    if ks_pass:
+        cmd.append("--ksPass")
+        cmd.append(ks_pass)
+
     with subprocess.Popen(
         cmd, stdin=pipe, stdout=subprocess.PIPE, stderr=sys.stderr
     ) as process:
@@ -608,6 +625,10 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
     "--apktool-path", default=None, help="Specify the path or command to run apktool."
 )
 @click.option("--frida-version", default=None, help="Specify the Frida version to use.")
+@click.option("--ks", default=None, help="The keystore file. If not provided, will use debug keystore.")
+@click.option("--ksAlias", default=None, help="The alias of the used key in the keystore.")
+@click.option("--ksKeyPass", default=None, help="The password for the key.")
+@click.option("--ksPass", default=None, help="The password for the keystore.")
 @click.option(
     "--version",
     is_flag=True,
@@ -635,6 +656,10 @@ def run(
     recompile_opts: str,
     apktool_path: str,
     frida_version: str,
+    ks: str,
+    ks_alias: str,
+    ks_key_pass: str,
+    ks_pass: str,
 ):
     """Patch an APK with the Frida gadget library"""
     apk_path = Path(apk_path)
@@ -866,7 +891,7 @@ def run(
 
         if sign:
             logger.debug("Starting APK signing using uber-apk-signer")
-            sign_apk(str(recompiled_apk_path))
+            sign_apk(str(recompiled_apk_path), ks, ks_alias, ks_key_pass, ks_pass)
             return
     else:
         logger.info(apk_path)
