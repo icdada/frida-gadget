@@ -107,7 +107,7 @@ With Docker
 
 .. code:: sh
 
-    docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/your-app.apk --arch arm64 --sign
+    docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/your-app.apk --arch arm64
 
 | Note: Replace ``your-app.apk`` with your actual APK filename. The patched APK will be created in the same directory as your original APK.
 |
@@ -116,7 +116,7 @@ With Docker
 
 .. code:: sh
 
-    docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/example.apk --arch arm64 --sign
+    docker run -v $(pwd):/workspace/mount ksg97031/frida-gadget /workspace/mount/example.apk --arch arm64
     # The patched APK will be located at ./example/dist/example.apk
 
 Compatibility
