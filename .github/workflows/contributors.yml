@@ -19,3 +19,6 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           round: true
+    permissions:
+      contents: read
+      pull-requests: write
