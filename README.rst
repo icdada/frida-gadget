@@ -21,17 +21,17 @@ Prerequirement
 ----------------
 
 | You should install ``apktool`` and add it to your ``PATH`` environment variable.
-|   
+|
 
 .. code:: sh
 
    # Install Apktool on macOS
    brew install apktool
-    
-   # Add Apktool to your PATH environment variable
-   export PATH=$PATH:$HOME/.brew/bin 
 
-| For other operating systems, such as ``Windows``, you can refer to the `Install Guide <https://ibotpeaches.github.io/Apktool/install/>`_.
+   # Add Apktool to your PATH environment variable
+   export PATH=$PATH:$HOME/.brew/bin
+
+| For other operating systems, such as ``Windows``, you can refer to the `Install Guide <https://apktool.org/docs/install/>`_.
 
 
 Usage
@@ -43,7 +43,7 @@ Usage
       Usage: cli.py [OPTIONS] APK_PATH
 
       Patch an APK with the Frida gadget library
-    
+
       Options:
          --arch TEXT                Specify the target architecture of the device. (options: arm64, x86_64, arm, x86)
          --config TEXT              Specify the Frida configuration file.
@@ -194,7 +194,7 @@ How to Identify the Injection?
 .. code:: sh
 
     $ unzip -l [REDACTED]/demo-apk/target/dist/target.apk | grep libfrida-gadget
-      21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so 
+      21133848  09-15-2021 02:28   lib/arm64-v8a/libfrida-gadget-16.1.3-android-arm64.so
 
 Tips
 ------------
