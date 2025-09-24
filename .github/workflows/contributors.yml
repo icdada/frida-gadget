@@ -6,19 +6,20 @@ on:
     branches:
       - main
   workflow_dispatch:
-      inputs:
-         logLevel:
-            description: 'manual run'     
-            required: false
-            default: ''
+    inputs:
+      logLevel:
+        description: 'manual run'
+        required: false
+        default: ''
+
 jobs:
   contributors:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: bubkoo/contributors-list@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           round: true
-    permissions:
-      contents: read
-      pull-requests: write
