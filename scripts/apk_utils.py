@@ -23,10 +23,10 @@ def get_main_activity(apk:APK):
                 val = sitem.get(apk._ns("name"))
                 if val == "android.intent.action.MAIN":
                     activity = item.get(apk._ns("name"))
-                    target_activty = item.get(apk._ns("targetActivity"))
-                    if target_activty is not None:
-                        logger.debug('Target activity found: %s -> %s', activity, target_activty)
-                        activity = target_activty
+                    target_activity = item.get(apk._ns("targetActivity"))
+                    if target_activity is not None:
+                        logger.debug('Target activity found: %s -> %s', activity, target_activity)
+                        activity = target_activity
                     if activity is not None:
                         x.add(activity)
                     else:
@@ -36,9 +36,9 @@ def get_main_activity(apk:APK):
                 val = sitem.get(apk._ns("name"))
                 if val == "android.intent.category.LAUNCHER":
                     activity = item.get(apk._ns("name"))
-                    target_activty = item.get(apk._ns("targetActivity"))
-                    if target_activty is not None:
-                        activity = target_activty
+                    target_activity = item.get(apk._ns("targetActivity"))
+                    if target_activity is not None:
+                        activity = target_activity
                     if activity is not None:
                         y.add(activity)
                     else:

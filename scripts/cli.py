@@ -193,7 +193,7 @@ def insert_loadlibary(decompiled_path, main_activity, load_library_name):
     return target_smali_class_number
 
 def modify_manifest(decompiled_path):
-    """Modify manifest permssions
+    """Modify manifest permissions
 
     Args:
         decompiled_path (str): decomplied path of apk file
@@ -460,7 +460,7 @@ def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: s
 
     pipe = subprocess.PIPE
     cmd = ["java", "-jar", signer_path, "--apks", apk_path]
-    
+
     if ks:
         cmd.append("--ks")
         cmd.append(ks)
@@ -849,22 +849,22 @@ def run(
             # Create a temporary directory for extraction
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_dir_path = Path(temp_dir)
-                
+
                 # Extract original APK
                 original_apk_zip = zipfile.ZipFile(apk_path, 'r')
                 original_apk_zip.extractall(temp_dir_path)
                 original_apk_zip.close()
-                
+
                 # Create a temporary file for the recompiled APK
                 with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                     temp_file_path = Path(temp_file.name)
-                
+
                 # Open recompiled APK for reading
                 recompiled_apk = zipfile.ZipFile(recompiled_apk_path, 'r')
-                
+
                 # Create a new ZIP file
                 new_apk = zipfile.ZipFile(temp_file_path, 'w')
-                
+
                 # Copy all files from recompiled APK except dex files
                 modified_dex_filename = f"classes{modified_dex_number}.dex" \
                     if modified_dex_number and modified_dex_number > 1 else "classes.dex"
@@ -882,7 +882,7 @@ def run(
                 # Close all zip files
                 recompiled_apk.close()
                 new_apk.close()
-                
+
                 # Replace the recompiled APK with the new one
                 shutil.move(temp_file_path, recompiled_apk_path)
                 logger.info("Successfully replaced dex files in the recompiled APK")
