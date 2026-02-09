@@ -451,8 +451,8 @@ def inject_gadget_into_apk(
                         "The config file must contain an 'interaction.type' key."
                     )
                     sys.exit(-1)
-                if config_data["interaction"]["type"] == (
-                    "script-directory" or "script"
+                if config_data["interaction"]["type"] in (
+                    "script-directory", "script"
                 ):
                     if "path" not in config_data["interaction"]:
                         logger.error(
