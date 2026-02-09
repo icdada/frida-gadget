@@ -96,8 +96,6 @@ def download_gadget(
 
     if custom_gadget_path:
         logger.info("Using custom Frida gadget file: %s", custom_gadget_path)
-        import shutil
-        from pathlib import Path
 
         file_ext = Path(custom_gadget_path).suffix
         dest_filename = (

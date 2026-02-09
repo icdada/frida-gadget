@@ -26,7 +26,7 @@ class FridaGithub:
             
         # Set GitHub API base URL based on custom repo or default
         if github_repo:
-            if github_repo.startswith(('http://', 'https://', 'github.com')):
+            if github_repo.startswith(('https://', 'github.com')):
                 match = re.search(r'\.com/([^/]+)/([^/]+)', github_repo)
                 if match:
                     owner, repo = match.groups()
