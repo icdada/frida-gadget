@@ -30,13 +30,15 @@ ADD --chmod=755 --checksum=sha256:${APKTOOL_SHA256} \
 # Create a non-root user
 RUN useradd -m -s /bin/bash frida-user
 
-# Install python dependencies. '--only-binary :all:' installs wheels only, so no
-# package can run setup code while the image is being built. frida is listed in
-# requirements.txt, so it no longer needs a line of its own.
+# Install python dependencies from the lock file, so a rebuild resolves to the
+# same versions rather than whatever is newest. '--only-binary :all:' installs
+# wheels only, so no package can run setup code while the image is being built.
+# setup.py keeps ranges instead; pinning a library's dependencies would force
+# them on everyone who installs frida-gadget.
 WORKDIR /workspace
-COPY requirements.txt /workspace/requirements.txt
-RUN pip3 install --no-cache-dir --only-binary :all: --upgrade pip && \
-    pip3 install --no-cache-dir --only-binary :all: -r requirements.txt
+COPY requirements.lock /workspace/requirements.lock
+RUN pip3 install --no-cache-dir --only-binary :all: pip==26.2.1 && \
+    pip3 install --no-cache-dir --only-binary :all: -r requirements.lock
 
 COPY scripts /workspace/scripts
 

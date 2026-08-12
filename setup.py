@@ -17,10 +17,10 @@ with open("README.rst", "r", encoding="utf-8") as fh:
 
 requires = [
     'androguard >= 4.0.0',
-    'click',
-    'colorlog',
-    'frida',
-    'requests',
+    'click >= 8.0',
+    'colorlog >= 6.0',
+    'frida >= 16.0',
+    'requests >= 2.25',
 ]
 
 setuptools.setup(
