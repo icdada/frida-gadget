@@ -1,22 +1,11 @@
 """init file for scripts folder."""
-import sys
-import subprocess
-from .logger import logger
+from typing import Optional
 
+try:
+    import frida
 
-def import_or_install(package):
-    """Install a package, or exit asking the user to try again.
-
-    Args:
-        package (string): Name of the package to install.
-    """
-    try:
-        __import__(package)
-    except ImportError:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'frida', '--user'])
-        logger.info('Try Again')
-        sys.exit(0)
-
-
-import_or_install('frida')  # Install missing packages
-INSTALLED_FRIDA_VERSION: str = __import__('frida').__version__  # Get installed frida version
+    INSTALLED_FRIDA_VERSION: Optional[str] = frida.__version__
+except ImportError:
+    # frida is only read to work out which gadget release to download, so the
+    # tool still works without it as long as --frida-version says which one.
+    INSTALLED_FRIDA_VERSION = None
