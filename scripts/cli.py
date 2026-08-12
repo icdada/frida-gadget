@@ -14,6 +14,7 @@ It provides various functionalities including:
 import os
 import re
 import sys
+import atexit
 import shutil
 import subprocess
 import json
@@ -795,8 +796,12 @@ def run(
             original_content = js_path.read_text()
             wrapped_content = wrap_js_with_timeout(original_content, js_delay)
 
-            # Create a temporary file with wrapped content
-            temp_js = js_path.parent / f"{js_path.stem}_wrapped{js_path.suffix}"
+            # Keep the wrapped copy in a private temporary directory. Writing it
+            # next to the original silently overwrote any existing file of that
+            # name and failed outright when the directory was read-only.
+            temp_dir = tempfile.mkdtemp(prefix="frida-gadget-")
+            atexit.register(shutil.rmtree, temp_dir, True)
+            temp_js = Path(temp_dir).joinpath("wrapped.js")
             temp_js.write_text(wrapped_content)
             js = str(temp_js)
             logger.debug("Created wrapped JavaScript file: %s", js)
@@ -936,17 +941,8 @@ def run(
         else:
             logger.info("Frida gadget injected into APK: %s", recompiled_apk_path)
 
-        # Clean up wrapped JavaScript file if it exists
-        if js and js_delay is not None:
-            temp_js = Path(js)
-            if temp_js.exists() and temp_js.name.endswith("_wrapped.js"):
-                try:
-                    temp_js.unlink()
-                    logger.debug("Cleaned up wrapped JavaScript file: %s", temp_js)
-                except Exception as e:
-                    logger.warning(
-                        "Failed to clean up wrapped JavaScript file: %s", str(e)
-                    )
+        # The wrapped JavaScript file is removed by the atexit hook that created it,
+        # so it no longer leaks when --skip-recompile is used or the run fails.
 
         # Copy original dex files except the modified one to the recompiled APK
         logger.debug(f"Copying original dex files (except modified one {modified_dex_number}) to the recompiled APK")
