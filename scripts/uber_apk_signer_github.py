@@ -1,4 +1,4 @@
-"""Github module for download frida gadget library"""
+"""Github module for download frida gadget library."""
 # Base code is sourced from the GitHub repository of Objection.
 # Source: https://github.com/sensepost/objection/blob/master/objection/utils/patchers/github.py
 from pathlib import Path
@@ -7,7 +7,7 @@ import os
 import requests
 
 class UberApkSignerGithub:
-    """ Interact with Github """
+    """Interact with Github."""
 
     GITHUB_LATEST_RELEASE = (
         'https://api.github.com/repos/patrickfav/uber-apk-signer/releases/latest'
@@ -17,23 +17,18 @@ class UberApkSignerGithub:
     signer_version = None
 
     def __init__(self, signer_version: str = None):
-        """
-            Init a new instance of Github
-        """
-
+        """Init a new instance of Github."""
         if signer_version:
             self.signer_version = signer_version
 
         self.request_cache = {}
 
     def _call(self, endpoint: str) -> dict:
-        """
-            Make a call to Github and cache the response.
+        """Make a call to Github and cache the response.
 
-            :param endpoint:
-            :return:
+        :param endpoint:
+        :return:
         """
-
         # return a cached response if possible
         if endpoint in self.request_cache:
             return self.request_cache[endpoint]
@@ -48,12 +43,10 @@ class UberApkSignerGithub:
         return results
 
     def get_assets(self) -> dict:
-        """
-            Gets the assets for the currently selected signer_version.
+        """Get the assets for the currently selected signer_version.
 
-            :return:
+        :return:
         """
-
         assets = self._call(self.GITHUB_LATEST_RELEASE)
 
         self.signer_version = assets['tag_name'][1:]
@@ -66,12 +59,11 @@ class UberApkSignerGithub:
         return assets['assets']
 
     def download_asset(self, url: str, output_file: str) -> None:
-        """
-            Download an asset from Github.
+        """Download an asset from Github.
 
-            :param url:
-            :param output_file:
-            :return:
+        :param url:
+        :param output_file:
+        :return:
         """
         filepath = Path(output_file)
         if filepath.exists() and filepath.stat().st_size > 0:
@@ -84,12 +76,11 @@ class UberApkSignerGithub:
                     asset.write(chunk)
 
     def download_signer_jar(self, assets: list, signer_fullpath: str) -> str:
-        """
-            Download the signer jar library from Github.
+        """Download the signer jar library from Github.
 
-            :param assets:
-            :param signer_path:
-            :return:
+        :param assets:
+        :param signer_path:
+        :return:
         """
         assert len(assets) == 2, 'Unable to determine the correct asset to download.'
         assert signer_fullpath.endswith('.jar'), 'Signer path must end with .jar'

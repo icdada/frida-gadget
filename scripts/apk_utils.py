@@ -1,4 +1,4 @@
-"""Helpers for reading activity information out of an APK manifest"""
+"""Helpers for reading activity information out of an APK manifest."""
 from androguard.core.apk import APK
 
 from .logger import logger
@@ -13,7 +13,7 @@ LAUNCHER_CATEGORY = "android.intent.category.LAUNCHER"
 
 
 def android_attr(element, name: str):
-    """Read an 'android:' namespaced attribute off a manifest element
+    """Read an 'android:' namespaced attribute off a manifest element.
 
     Args:
         element: manifest element
@@ -26,7 +26,7 @@ def android_attr(element, name: str):
 
 
 def iter_activities(apk: APK):
-    """Yield every activity and activity-alias declared in the manifest
+    """Yield every activity and activity-alias declared in the manifest.
 
     Args:
         apk (APK): parsed apk file
@@ -49,7 +49,7 @@ def iter_activities(apk: APK):
 
 
 def resolve_activity_name(element):
-    """Resolve the class an activity entry points at
+    """Resolve the class an activity entry points at.
 
     An activity-alias points at another activity through 'targetActivity',
     which is the class that actually has to be patched.
@@ -70,7 +70,7 @@ def resolve_activity_name(element):
 
 
 def declares(element, tag: str, value: str) -> bool:
-    """Check whether an activity declares an intent filter entry
+    """Check whether an activity declares an intent filter entry.
 
     Args:
         element: manifest element of an activity or activity-alias
@@ -86,7 +86,7 @@ def declares(element, tag: str, value: str) -> bool:
 
 
 def get_main_activity(apk: APK):
-    """Find the activity the launcher starts
+    """Find the activity the launcher starts.
 
     Args:
         apk (APK): parsed apk file

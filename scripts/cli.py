@@ -1,5 +1,4 @@
-"""
-Frida Gadget Injector for Android APK
+"""Frida Gadget Injector for Android APK.
 
 This script allows you to inject the Frida gadget library into an Android APK.
 It provides various functionalities including:
@@ -10,7 +9,6 @@ It provides various functionalities including:
 - Recompiling the APK
 - Optionally signing the APK using uber-apk-signer
 """
-
 import os
 import sys
 import atexit
@@ -41,7 +39,7 @@ APKTOOL = which("apktool")
 
 
 def get_decompiled_path(apk_path: Path) -> Path:
-    """Build the path apktool decompiles the APK into
+    """Build the path apktool decompiles the APK into.
 
     Args:
         apk_path (Path): path of apk file
@@ -58,7 +56,7 @@ def get_decompiled_path(apk_path: Path) -> Path:
 
 
 def is_reusable_decompile_dir(path: Path) -> bool:
-    """Check whether a decompile directory can be safely removed
+    """Check whether a decompile directory can be safely removed.
 
     Only empty directories and previous apktool outputs are reusable, so an
     unrelated directory that happens to share the APK name is never deleted.
@@ -86,7 +84,7 @@ def is_reusable_decompile_dir(path: Path) -> bool:
 
 
 def resolve_apktool(apktool_path: str = None) -> str:
-    """Work out the apktool command to run
+    """Work out the apktool command to run.
 
     Args:
         apktool_path (str): path or command given with --apktool-path
@@ -123,15 +121,13 @@ def resolve_apktool(apktool_path: str = None) -> str:
 
 
 def run_apktool(option: list, apk_path: str, apktool: str = None):
-    """Run apktool with option
+    """Run apktool with option.
 
     Args:
         option (list|str): option of apktool
         apk_path (str): path of apk file
         apktool (str): command to invoke apktool with, defaults to the one on PATH
-
     """
-
     pipe = subprocess.PIPE
     cmd = (apktool or APKTOOL).split() + option + [apk_path]
     with subprocess.Popen(
@@ -165,7 +161,7 @@ def download_gadget(
     custom_gadget_path: str = None,
     github_repo: str = None,
 ):
-    """Download the frida gadget library or use a custom file
+    """Download the frida gadget library or use a custom file.
 
     Args:
         arch (str): architecture of the device
@@ -217,7 +213,7 @@ def download_gadget(
 
 
 def download_signer():
-    """Download the Uber Apk Signer"""
+    """Download the Uber Apk Signer."""
     signer_github = UberApkSignerGithub()
     assets = signer_github.get_assets()
     file = f"uber-apk-signer-{signer_github.signer_version}.jar"
@@ -230,7 +226,7 @@ def download_signer():
 
 
 def find_activity_smali(decompiled_path, main_activity):
-    """Locate the smali file of an activity across the smali_classes* trees
+    """Locate the smali file of an activity across the smali_classes* trees.
 
     Args:
         decompiled_path (Path): decompiled path of apk file
@@ -264,7 +260,7 @@ def find_activity_smali(decompiled_path, main_activity):
 
 
 def insert_load_library_call(text: list, load_library_name: str) -> bool:
-    """Insert the loadLibrary call into the first usable entrypoint
+    """Insert the loadLibrary call into the first usable entrypoint.
 
     Args:
         text (list): lines of the smali file, modified in place
@@ -303,7 +299,7 @@ def insert_load_library_call(text: list, load_library_name: str) -> bool:
 
 
 def insert_loadlibary(decompiled_path, main_activity, load_library_name):
-    """Inject loadlibary code to main activity
+    """Inject loadlibary code to main activity.
 
     Args:
         decompiled_path (str): decomplied path of apk file
@@ -340,7 +336,7 @@ def insert_loadlibary(decompiled_path, main_activity, load_library_name):
     return target_smali_class_number
 
 def modify_manifest(decompiled_path):
-    """Modify manifest permissions
+    """Modify manifest permissions.
 
     Args:
         decompiled_path (str): decomplied path of apk file
@@ -367,7 +363,7 @@ def modify_manifest(decompiled_path):
 
 
 def detect_apk_architectures(decompiled_path):
-    """Detect architectures from the APK's lib directory
+    """Detect architectures from the APK's lib directory.
 
     Args:
         decompiled_path (str): decompiled path of apk file
@@ -413,7 +409,7 @@ ARCH_DIRNAMES = {
 
 
 def resolve_main_activity(apk: APK, main_activity: str = None) -> str:
-    """Work out which activity the loadLibrary call goes into
+    """Work out which activity the loadLibrary call goes into.
 
     Args:
         apk (APK): parsed apk file
@@ -449,7 +445,7 @@ def resolve_main_activity(apk: APK, main_activity: str = None) -> str:
 
 
 def resolve_gadget_name(gadget_path: str, custom_gadget_name: str, arch: str) -> str:
-    """Decide the file name the gadget is stored under inside the APK
+    """Decide the file name the gadget is stored under inside the APK.
 
     Args:
         gadget_path (str): path of the downloaded or supplied gadget
@@ -475,7 +471,7 @@ def resolve_gadget_name(gadget_path: str, custom_gadget_name: str, arch: str) ->
 
 
 def prepare_lib_dir(decompiled_path: Path, current_arch: str) -> Path:
-    """Create the lib/<abi> directory the gadget is copied into
+    """Create the lib/<abi> directory the gadget is copied into.
 
     Args:
         decompiled_path (Path): decompiled path of apk file
@@ -496,7 +492,7 @@ def prepare_lib_dir(decompiled_path: Path, current_arch: str) -> Path:
 
 
 def load_config_data(config: str) -> dict:
-    """Read a gadget config file and check it declares an interaction
+    """Read a gadget config file and check it declares an interaction.
 
     Args:
         config (str): path of the config file
@@ -519,7 +515,7 @@ def load_config_data(config: str) -> dict:
 
 
 def warn_config_without_script(config: str):
-    """Explain what a config without --js means for the resulting APK
+    """Explain what a config without --js means for the resulting APK.
 
     Args:
         config (str): path of the config file
@@ -552,7 +548,7 @@ def warn_config_without_script(config: str):
 def write_gadget_config(
     config: str, js: str, lib_arch_dir: Path, load_library_name: str, upload_files: dict
 ):
-    """Write the gadget's config file next to the library
+    """Write the gadget's config file next to the library.
 
     Args:
         config (str): path given with --config
@@ -592,7 +588,7 @@ def write_gadget_config(
 
 
 def upload_gadget_files(upload_files: dict, lib_arch_dir: Path, load_library_name: str):
-    """Copy the config and script files into the APK's lib directory
+    """Copy the config and script files into the APK's lib directory.
 
     Args:
         upload_files (dict): file type to source path
@@ -624,7 +620,7 @@ def upload_gadget_files(upload_files: dict, lib_arch_dir: Path, load_library_nam
 
 @dataclass
 class GadgetSource:
-    """Where the gadget library comes from and what it is called
+    """Where the gadget library comes from and what it is called.
 
     Attributes:
         custom_gadget_name (str): name given with --custom-gadget-name
@@ -652,7 +648,7 @@ def inject_gadget_into_apk(
     js: str = None,
     gadget_source: "GadgetSource" = None,
 ) -> int:
-    """Inject frida gadget into an APK
+    """Inject frida gadget into an APK.
 
     Args:
         apk (APK): path of apk file
@@ -709,7 +705,7 @@ def inject_gadget_into_apk(
 
 
 def stdin_is_interactive():
-    """Check whether a child process could prompt on this stdin
+    """Check whether a child process could prompt on this stdin.
 
     Returns:
         bool: True if stdin is attached to a terminal
@@ -721,7 +717,7 @@ def stdin_is_interactive():
 
 
 def redact_passwords(cmd: list):
-    """Hide keystore passwords in a command line before it is reported
+    """Hide keystore passwords in a command line before it is reported.
 
     Args:
         cmd (list): command line of the signer
@@ -744,7 +740,7 @@ def sign_apk(
     ks_key_pass: str = None,
     ks_pass: str = None,
 ):
-    """Run uber apk signer with option
+    """Run uber apk signer with option.
 
     Args:
         apk_path (str): path of apk file
@@ -814,7 +810,7 @@ def sign_apk(
 
 
 def restore_original_dex(apk_path, recompiled_apk_path, modified_dex_number):
-    """Put the original dex files back into the recompiled APK
+    """Put the original dex files back into the recompiled APK.
 
     apktool reassembles every dex file, which can change classes it was never
     asked to touch. Only the dex holding the patched main activity has to come
@@ -927,7 +923,7 @@ def detect_adb_arch():
 
 
 def print_version(ctx, _, value):
-    """Print version and exit"""
+    """Print version and exit."""
     if not value or ctx.resilient_parsing:
         return
     print(f"frida-gadget version {__version__}")
@@ -938,7 +934,7 @@ SUPPORTED_ARCHS = ["arm", "arm64", "x86", "x86_64"]
 
 
 def log_target_arch(arch: str):
-    """Report the architecture the gadget will be built for
+    """Report the architecture the gadget will be built for.
 
     Args:
         arch (str): normalized architecture name
@@ -958,7 +954,7 @@ def log_target_arch(arch: str):
 
 
 def validate_arch(arch: str) -> str:
-    """Check the architecture is one we can download a gadget for
+    """Check the architecture is one we can download a gadget for.
 
     Args:
         arch (str): normalized architecture name
@@ -981,7 +977,7 @@ def validate_arch(arch: str) -> str:
 
 
 def validate_input_files(js: str, config: str):
-    """Check the files given with --js and --config are usable
+    """Check the files given with --js and --config are usable.
 
     Args:
         js (str): path given with --js
@@ -1007,7 +1003,7 @@ def validate_input_files(js: str, config: str):
 
 
 def prepare_decompile_dir(decompiled_path: Path):
-    """Make sure the decompile target is an empty directory we may write to
+    """Make sure the decompile target is an empty directory we may write to.
 
     Args:
         decompiled_path (Path): the decompile directory
@@ -1030,7 +1026,7 @@ def prepare_decompile_dir(decompiled_path: Path):
 def build_decompile_options(
     decompiled_path: Path, force_manifest: bool, no_res: bool, decompile_opts: str
 ):
-    """Assemble the apktool decode command line
+    """Assemble the apktool decode command line.
 
     Args:
         decompiled_path (Path): where apktool should write the decompiled APK
@@ -1059,7 +1055,7 @@ def build_decompile_options(
 
 
 def normalize_arch(arch: str, skip_decompile: bool) -> str:
-    """Turn the --arch value into one of the names used internally
+    """Turn the --arch value into one of the names used internally.
 
     Args:
         arch (str): value given with --arch, None to auto-detect over ADB
@@ -1083,7 +1079,7 @@ def normalize_arch(arch: str, skip_decompile: bool) -> str:
 
 
 def wrap_js_file(js: str, js_delay: int) -> str:
-    """Write a delayed copy of the script and return its path
+    """Write a delayed copy of the script and return its path.
 
     Args:
         js (str): path given with --js
@@ -1129,7 +1125,7 @@ def wrap_js_file(js: str, js_delay: int) -> str:
 
 
 def wrap_js_with_timeout(js_content: str, delay: int) -> str:
-    """Wrap JavaScript content with setTimeout
+    """Wrap JavaScript content with setTimeout.
 
     Args:
         js_content (str): Original JavaScript content
@@ -1260,7 +1256,7 @@ def run(  # NOSONAR
     ks_pass: str,
     github_repo: str,
 ):
-    """Patch an APK with the Frida gadget library"""
+    """Patch an APK with the Frida gadget library."""
     apk_path = Path(apk_path)
 
     logger.info("APK: '%s'", apk_path)

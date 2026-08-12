@@ -1,4 +1,4 @@
-"""Github module for download frida gadget library"""
+"""Github module for download frida gadget library."""
 # Base code is sourced from the GitHub repository of Objection.
 # Source: https://github.com/sensepost/objection/blob/master/objection/utils/patchers/github.py
 import lzma
@@ -7,7 +7,7 @@ from pathlib import Path
 import requests
 
 class FridaGithub:
-    """ Interact with Github """
+    """Interact with Github."""
 
     DEFAULT_GITHUB_API_BASE = 'https://api.github.com/repos/frida/frida'
 
@@ -25,10 +25,7 @@ class FridaGithub:
     github_api_base = None
 
     def __init__(self, gadget_version: str = "", github_repo: str = ""):
-        """
-            Init a new instance of Github
-        """
-
+        """Init a new instance of Github."""
         if gadget_version:
             self.gadget_version = gadget_version
 
@@ -37,13 +34,11 @@ class FridaGithub:
 
     @classmethod
     def parse_repo(cls, github_repo: str) -> str:
-        """
-            Turn a repository reference into a Github API base URL.
+        """Turn a repository reference into a Github API base URL.
 
-            :param github_repo: 'owner/repo' or a github.com URL, empty for frida/frida
-            :return:
+        :param github_repo: 'owner/repo' or a github.com URL, empty for frida/frida
+        :return:
         """
-
         if not github_repo:
             return cls.DEFAULT_GITHUB_API_BASE
 
@@ -57,32 +52,26 @@ class FridaGithub:
 
     @property
     def latest_release_url(self) -> str:
-        """
-            Endpoint of the latest release of the selected repository.
+        """Endpoint of the latest release of the selected repository.
 
-            :return:
+        :return:
         """
-
         return f'{self.github_api_base}/releases/latest'
 
     @property
     def tagged_release_url(self) -> str:
-        """
-            Endpoint template of a tagged release of the selected repository.
+        """Endpoint template of a tagged release of the selected repository.
 
-            :return:
+        :return:
         """
-
         return f'{self.github_api_base}/releases/tags/{{tag}}'
 
     def _call(self, endpoint: str) -> dict:
-        """
-            Make a call to Github and cache the response.
+        """Make a call to Github and cache the response.
 
-            :param endpoint:
-            :return:
+        :param endpoint:
+        :return:
         """
-
         # return a cached response if possible
         if endpoint in self.request_cache:
             return self.request_cache[endpoint]
@@ -97,24 +86,19 @@ class FridaGithub:
         return results
 
     def get_latest_version(self) -> str:
-        """
-            Call Github and get the tag_name of the latest
-            release.
+        """Call Github and get the tag_name of the latest release.
 
-            :return:
+        :return:
         """
-
         self.gadget_version = self._call(self.latest_release_url)['tag_name']
 
         return self.gadget_version
 
     def get_assets(self) -> dict:
-        """
-            Gets the assets for the currently selected gadget_version.
+        """Get the assets for the currently selected gadget_version.
 
-            :return:
+        :return:
         """
-
         assets = self._call(self.tagged_release_url.format(tag=self.gadget_version))
 
         if 'assets' not in assets:
@@ -125,14 +109,12 @@ class FridaGithub:
         return assets['assets']
 
     def download_asset(self, url: str, output_file: str) -> None:
-        """
-            Download an asset from Github.
+        """Download an asset from Github.
 
-            :param url:
-            :param output_file:
-            :return:
+        :param url:
+        :param output_file:
+        :return:
         """
-
         assert output_file.endswith('.xz')
         filepath = Path(output_file)
         if filepath.exists() and filepath.stat().st_size > 0:
@@ -145,13 +127,11 @@ class FridaGithub:
                     asset.write(chunk)
 
     def download_gadget_so(self, url, gadget_fullpath: str) -> str:
-        """
-            Download the gadget library from Github.
+        """Download the gadget library from Github.
 
-            :param gadget_path:
-            :return:
+        :param gadget_path:
+        :return:
         """
-
         assert gadget_fullpath.endswith('.so')
         gadget_path = Path(gadget_fullpath)
         download_directory = gadget_path.parent
