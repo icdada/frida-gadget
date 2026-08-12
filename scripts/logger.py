@@ -1,4 +1,4 @@
-"""logger.py"""
+"""logger.py."""
 import logging
 from colorlog import ColoredFormatter
 

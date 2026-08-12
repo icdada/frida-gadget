@@ -5,7 +5,7 @@ from .logger import logger
 
 
 def import_or_install(package):
-    """Function to install missing packages.
+    """Install a package, or exit asking the user to try again.
 
     Args:
         package (string): Name of the package to install.
