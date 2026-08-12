@@ -14,6 +14,7 @@ It provides various functionalities including:
 import os
 import re
 import sys
+import atexit
 import shutil
 import subprocess
 import json
@@ -536,6 +537,18 @@ def inject_gadget_into_apk(
     return insert_loadlibary(decompiled_path, main_activity, load_library_name)
 
 
+def stdin_is_interactive():
+    """Check whether a child process could prompt on this stdin
+
+    Returns:
+        bool: True if stdin is attached to a terminal
+    """
+    try:
+        return sys.stdin is not None and sys.stdin.isatty()
+    except ValueError:  # stdin was already closed
+        return False
+
+
 def redact_passwords(cmd: list):
     """Hide keystore passwords in a command line before it is reported
 
@@ -596,7 +609,15 @@ def sign_apk(
 
     # uber-apk-signer prompts for the passwords that were not provided,
     # which only works while it owns the terminal.
-    interactive = bool(ks) and not (ks_pass and ks_key_pass)
+    needs_prompt = bool(ks) and not (ks_pass and ks_key_pass)
+    interactive = needs_prompt and stdin_is_interactive()
+    if needs_prompt and not interactive:
+        logger.warning(
+            "There is no terminal attached, so uber-apk-signer cannot prompt for "
+            "the missing keystore password.\n"
+            "Run this from a terminal, or pass --ks-pass and --ks-key-pass."
+        )
+
     stdio = None if interactive else subprocess.PIPE
 
     with subprocess.Popen(
@@ -849,8 +870,12 @@ def run(
             original_content = js_path.read_text()
             wrapped_content = wrap_js_with_timeout(original_content, js_delay)
 
-            # Create a temporary file with wrapped content
-            temp_js = js_path.parent / f"{js_path.stem}_wrapped{js_path.suffix}"
+            # Keep the wrapped copy in a private temporary directory. Writing it
+            # next to the original silently overwrote any existing file of that
+            # name and failed outright when the directory was read-only.
+            temp_dir = tempfile.mkdtemp(prefix="frida-gadget-")
+            atexit.register(shutil.rmtree, temp_dir, True)
+            temp_js = Path(temp_dir).joinpath("wrapped.js")
             temp_js.write_text(wrapped_content)
             js = str(temp_js)
             logger.debug("Created wrapped JavaScript file: %s", js)
@@ -992,17 +1017,8 @@ def run(
         else:
             logger.info("Frida gadget injected into APK: %s", recompiled_apk_path)
 
-        # Clean up wrapped JavaScript file if it exists
-        if js and js_delay is not None:
-            temp_js = Path(js)
-            if temp_js.exists() and temp_js.name.endswith("_wrapped.js"):
-                try:
-                    temp_js.unlink()
-                    logger.debug("Cleaned up wrapped JavaScript file: %s", temp_js)
-                except Exception as e:
-                    logger.warning(
-                        "Failed to clean up wrapped JavaScript file: %s", str(e)
-                    )
+        # The wrapped JavaScript file is removed by the atexit hook that created it,
+        # so it no longer leaks when --skip-recompile is used or the run fails.
 
         # Copy original dex files except the modified one to the recompiled APK
         logger.debug(
