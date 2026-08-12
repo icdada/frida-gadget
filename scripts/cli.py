@@ -839,7 +839,7 @@ def restore_original_dex(apk_path, recompiled_apk_path, modified_dex_number):
                 original_apk.extractall(temp_dir_path)
 
             # Built inside the temporary directory so a failure cannot leave a
-            # stray file behind, and the move below stays on one filesystem
+            # stray file behind the way the old NamedTemporaryFile did
             staged_apk_path = temp_dir_path.joinpath("repacked.apk")
             with zipfile.ZipFile(recompiled_apk_path, "r") as recompiled_apk, zipfile.ZipFile(
                 staged_apk_path, "w"
@@ -859,7 +859,18 @@ def restore_original_dex(apk_path, recompiled_apk_path, modified_dex_number):
 
             shutil.move(str(staged_apk_path), str(recompiled_apk_path))
             logger.info("Successfully replaced dex files in the recompiled APK")
-    except (OSError, zipfile.BadZipFile, KeyError) as e:
+    except (
+        OSError,
+        zipfile.BadZipFile,
+        zipfile.LargeZipFile,
+        NotImplementedError,
+        RuntimeError,
+        KeyError,
+    ) as e:
+        # Restoring the dex files is best effort: apktool has already produced a
+        # working APK, so a failure here is reported and the run carries on.
+        # zipfile raises NotImplementedError for compression methods it cannot
+        # read, which must not take the whole command down.
         logger.error("Failed to copy original dex files: %s", str(e))
 
 

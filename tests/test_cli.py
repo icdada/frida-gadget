@@ -2,6 +2,8 @@
 import io
 import json
 import subprocess
+import tempfile
+import zipfile
 
 import pytest
 
@@ -480,3 +482,91 @@ def test_missing_script_is_reported(tmp_path):
     """A path that does not exist stops the run."""
     with pytest.raises(SystemExit):
         cli.wrap_js_file(str(tmp_path / "absent.js"), 1)
+
+
+# --- restoring the original dex files ------------------------------------
+
+
+def build_apk(path, entries):
+    """Write a zip holding the given name to bytes mapping."""
+    with zipfile.ZipFile(path, "w") as archive:
+        for name, data in entries.items():
+            archive.writestr(name, data)
+    return path
+
+
+def read_apk(path):
+    """Read a zip back into a name to bytes mapping."""
+    with zipfile.ZipFile(path) as archive:
+        return {i.filename: archive.read(i.filename) for i in archive.infolist()}
+
+
+def test_only_the_patched_dex_comes_from_the_rebuild(tmp_path):
+    """Every other dex is taken from the original APK, resources from the rebuild."""
+    original = build_apk(
+        tmp_path / "app.apk",
+        {
+            "classes.dex": b"orig-1",
+            "classes2.dex": b"orig-2",
+            "classes3.dex": b"orig-3",
+            "res/layout.xml": b"orig-res",
+        },
+    )
+    recompiled = build_apk(
+        tmp_path / "rebuilt.apk",
+        {
+            "classes.dex": b"rebuilt-1",
+            "classes2.dex": b"rebuilt-2",
+            "classes3.dex": b"rebuilt-3",
+            "res/layout.xml": b"rebuilt-res",
+        },
+    )
+
+    cli.restore_original_dex(original, recompiled, 2)
+
+    result = read_apk(recompiled)
+    assert result["classes2.dex"] == b"rebuilt-2", "the patched dex must survive"
+    assert result["classes.dex"] == b"orig-1"
+    assert result["classes3.dex"] == b"orig-3"
+    assert result["res/layout.xml"] == b"rebuilt-res"
+
+
+@pytest.mark.parametrize("number", [None, 1])
+def test_the_primary_dex_is_the_default_target(tmp_path, number):
+    """smali/ and smali_classes1/ both map to classes.dex."""
+    original = build_apk(tmp_path / "app.apk", {"classes.dex": b"orig", "classes2.dex": b"orig-2"})
+    recompiled = build_apk(
+        tmp_path / f"rebuilt{number}.apk", {"classes.dex": b"new", "classes2.dex": b"new-2"}
+    )
+
+    cli.restore_original_dex(original, recompiled, number)
+
+    result = read_apk(recompiled)
+    assert result["classes.dex"] == b"new"
+    assert result["classes2.dex"] == b"orig-2"
+
+
+def test_a_failure_leaves_the_rebuilt_apk_alone(tmp_path):
+    """Restoring is best effort, so a broken original must not lose the rebuild."""
+    broken = tmp_path / "app.apk"
+    broken.write_bytes(b"not a zip at all")
+    recompiled = build_apk(tmp_path / "rebuilt.apk", {"classes.dex": b"new"})
+
+    cli.restore_original_dex(broken, recompiled, None)
+
+    assert read_apk(recompiled) == {"classes.dex": b"new"}
+
+
+def test_no_temporary_file_is_left_behind(tmp_path, monkeypatch):
+    """A failure part way through must not strand a staged APK in the temp dir."""
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(staging))
+
+    original = build_apk(tmp_path / "app.apk", {"classes.dex": b"orig"})
+    recompiled = build_apk(tmp_path / "rebuilt.apk", {"classes.dex": b"new", "classes9.dex": b"x"})
+
+    # classes9.dex is missing from the original, so the copy raises part way
+    cli.restore_original_dex(original, recompiled, None)
+
+    assert not list(staging.iterdir())
