@@ -50,6 +50,73 @@ def redact_passwords(cmd: list):
     return redacted
 
 
+def build_signer_command(signer_path: str, apk_path: str, keystore_options) -> list:
+    """Assemble the uber-apk-signer command line.
+
+    Args:
+        signer_path (str): path of the downloaded signer jar
+        apk_path (str): path of apk file
+        keystore_options: pairs of signer flag and value, skipped when unset
+
+    Returns:
+        list: the command to run
+    """
+    cmd = ["java", "-jar", signer_path, "--apks", apk_path]
+    for flag, value in keystore_options:
+        if value:
+            cmd += [flag, value]
+
+    return cmd
+
+
+def wants_prompt(ks, ks_key_pass, ks_pass) -> bool:
+    """Decide whether uber-apk-signer should be given the terminal.
+
+    It prompts for the passwords it was not given, which only works while it
+    owns the terminal. Without one the prompt would block forever, so the
+    piped behaviour is kept and the reason is reported.
+
+    Args:
+        ks (str): keystore file path
+        ks_key_pass (str): key password
+        ks_pass (str): keystore password
+
+    Returns:
+        bool: True when the signer should inherit the terminal
+    """
+    needs_prompt = bool(ks) and not (ks_pass and ks_key_pass)
+    if not needs_prompt:
+        return False
+
+    if stdin_is_interactive():
+        return True
+
+    logger.warning(
+        "There is no terminal attached, so uber-apk-signer cannot prompt for "
+        "the missing keystore password.\n"
+        "Run this from a terminal, or pass --ks-pass and --ks-key-pass."
+    )
+    return False
+
+
+def report_signed_apk(output: str):
+    """Print the signer output and pick the signed APK path out of it.
+
+    Args:
+        output (str): everything uber-apk-signer wrote to stdout
+    """
+    print(output)
+    if "VERIFY" not in output:
+        return
+
+    verify_message = output.split("VERIFY")[1]
+    if "file:" not in verify_message:
+        return
+
+    apk_path = verify_message.split("file:")[1].split("\n")[0].strip()
+    logger.info("APK signing finished: %s", apk_path)
+
+
 def sign_apk(
     apk_path: str,
     ks: str = None,
@@ -66,22 +133,16 @@ def sign_apk(
         ks_key_pass (str): key password
         ks_pass (str): keystore password
     """
-    signer_path = download_signer()  # Download apk signer
-
-    cmd = ["java", "-jar", signer_path, "--apks", apk_path]
-
-    if ks:
-        cmd.append("--ks")
-        cmd.append(ks)
-    if ks_alias:
-        cmd.append("--ksAlias")
-        cmd.append(ks_alias)
-    if ks_key_pass:
-        cmd.append("--ksKeyPass")
-        cmd.append(ks_key_pass)
-    if ks_pass:
-        cmd.append("--ksPass")
-        cmd.append(ks_pass)
+    cmd = build_signer_command(
+        download_signer(),
+        apk_path,
+        (
+            ("--ks", ks),
+            ("--ksAlias", ks_alias),
+            ("--ksKeyPass", ks_key_pass),
+            ("--ksPass", ks_pass),
+        ),
+    )
 
     if ks_key_pass or ks_pass:
         logger.warning(
@@ -91,17 +152,7 @@ def sign_apk(
             "prompt for them instead."
         )
 
-    # uber-apk-signer prompts for the passwords that were not provided,
-    # which only works while it owns the terminal.
-    needs_prompt = bool(ks) and not (ks_pass and ks_key_pass)
-    interactive = needs_prompt and stdin_is_interactive()
-    if needs_prompt and not interactive:
-        logger.warning(
-            "There is no terminal attached, so uber-apk-signer cannot prompt for "
-            "the missing keystore password.\n"
-            "Run this from a terminal, or pass --ks-pass and --ks-key-pass."
-        )
-
+    interactive = wants_prompt(ks, ks_key_pass, ks_pass)
     stdio = None if interactive else subprocess.PIPE
 
     with subprocess.Popen(
@@ -117,10 +168,4 @@ def sign_apk(
         if stdout is None:  # the signer wrote directly to the terminal
             return
 
-        output = stdout.decode()
-        print(output)
-        if "VERIFY" in output:
-            verify_message = output.split("VERIFY")[1]
-            if "file:" in verify_message:
-                apk_path = verify_message.split("file:")[1].split("\n")[0].strip()
-                logger.info("APK signing finished: %s", apk_path)
+        report_signed_apk(stdout.decode())
