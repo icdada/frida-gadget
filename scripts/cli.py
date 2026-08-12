@@ -859,18 +859,11 @@ def restore_original_dex(apk_path, recompiled_apk_path, modified_dex_number):
 
             shutil.move(str(staged_apk_path), str(recompiled_apk_path))
             logger.info("Successfully replaced dex files in the recompiled APK")
-    except (
-        OSError,
-        zipfile.BadZipFile,
-        zipfile.LargeZipFile,
-        NotImplementedError,
-        RuntimeError,
-        KeyError,
-    ) as e:
+    except (OSError, zipfile.BadZipFile, zipfile.LargeZipFile, RuntimeError, KeyError) as e:
         # Restoring the dex files is best effort: apktool has already produced a
         # working APK, so a failure here is reported and the run carries on.
-        # zipfile raises NotImplementedError for compression methods it cannot
-        # read, which must not take the whole command down.
+        # RuntimeError covers the NotImplementedError zipfile raises for
+        # compression methods it cannot read, which must not take the run down.
         logger.error("Failed to copy original dex files: %s", str(e))
 
 
