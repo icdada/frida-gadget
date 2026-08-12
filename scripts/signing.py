@@ -70,7 +70,8 @@ def build_signer_command(signer_path: str, apk_path: str, keystore_options) -> l
         path of the downloaded signer jar
     apk_path : str
         path of apk file
-    keystore_options: pairs of signer flag and value, skipped when unset
+    keystore_options : iterable
+        pairs of signer flag and value, skipped when the value is unset
 
     Returns
     -------

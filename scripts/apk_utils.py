@@ -18,7 +18,8 @@ def android_attr(element, name: str):
 
     Parameters
     ----------
-    element: manifest element
+    element : xml.etree.ElementTree.Element
+        manifest element
     name : str
         attribute name without the namespace
 
@@ -68,7 +69,8 @@ def resolve_activity_name(element):
 
     Parameters
     ----------
-    element: manifest element of an activity or activity-alias
+    element : xml.etree.ElementTree.Element
+        manifest element of an activity or activity-alias
 
     Returns
     -------
@@ -91,7 +93,8 @@ def declares(element, tag: str, value: str) -> bool:
 
     Parameters
     ----------
-    element: manifest element of an activity or activity-alias
+    element : xml.etree.ElementTree.Element
+        manifest element of an activity or activity-alias
     tag : str
         child tag to look at, 'action' or 'category'
     value : str
