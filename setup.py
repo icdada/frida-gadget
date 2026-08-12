@@ -16,12 +16,10 @@ with open("README.rst", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 requires = [
-    'click',
     'androguard >= 4.0.0',
-    'apk-signer',
-    'pytest',
+    'click',
     'colorlog',
-    'coverage',
+    'frida',
     'requests',
 ]
 

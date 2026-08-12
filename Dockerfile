@@ -30,12 +30,11 @@ RUN curl -fsSL --proto '=https' --tlsv1.2 \
 RUN useradd -m -s /bin/bash frida-user
 
 # Install python dependencies. '--only-binary :all:' installs wheels only, so no
-# package can run setup code while the image is being built. frida is imported
-# by scripts/__init__.py to read the version the gadget is matched against.
+# package can run setup code while the image is being built. frida is listed in
+# requirements.txt, so it no longer needs a line of its own.
 WORKDIR /workspace
 COPY requirements.txt /workspace/requirements.txt
 RUN pip3 install --no-cache-dir --only-binary :all: --upgrade pip && \
-    pip3 install --no-cache-dir --only-binary :all: frida && \
     pip3 install --no-cache-dir --only-binary :all: -r requirements.txt
 
 COPY scripts /workspace/scripts

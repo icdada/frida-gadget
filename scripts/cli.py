@@ -189,9 +189,16 @@ def download_gadget(
     if frida_version:
         logger.info("Using specified frida version: %s", frida_version)
         version = frida_version
-    else:
+    elif INSTALLED_FRIDA_VERSION:
         logger.info("Auto-detected your frida version: %s", INSTALLED_FRIDA_VERSION)
         version = INSTALLED_FRIDA_VERSION
+    else:
+        logger.error(
+            "frida is not installed, so the gadget version cannot be detected.\n"
+            "Install it with 'pip install frida', or name the release yourself "
+            "with the --frida-version option."
+        )
+        sys.exit(-1)
 
     if github_repo:
         logger.info("Using custom GitHub repository: %s", github_repo)

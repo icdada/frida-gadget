@@ -570,3 +570,58 @@ def test_no_temporary_file_is_left_behind(tmp_path, monkeypatch):
     cli.restore_original_dex(original, recompiled, None)
 
     assert not list(staging.iterdir())
+
+
+# --- frida version detection ---------------------------------------------
+
+
+def recording_github(asked):
+    """Build a FridaGithub stand-in that records the version it was given."""
+
+    class RecordingGithub:  # pylint: disable=too-few-public-methods
+        """Reports a release whose assets never match."""
+
+        def __init__(self, version, github_repo=""):
+            asked["version"] = version
+            asked["repo"] = github_repo
+
+        @staticmethod
+        def get_assets():
+            """Report a release with no matching asset."""
+            return []
+
+    return RecordingGithub
+
+
+def test_gadget_version_falls_back_to_the_installed_frida(monkeypatch, tmp_path):
+    """Without --frida-version the version frida reports is used."""
+    monkeypatch.setattr(cli, "INSTALLED_FRIDA_VERSION", "17.0.0")
+    monkeypatch.setattr(cli, "FILE_DIR", tmp_path)
+    asked = {}
+
+    monkeypatch.setattr(cli, "FridaGithub", recording_github(asked))
+    with pytest.raises(FileNotFoundError):
+        cli.download_gadget("arm64")
+
+    assert asked["version"] == "17.0.0"
+
+
+def test_missing_frida_asks_for_an_explicit_version(monkeypatch):
+    """Without frida installed the version has to be named on the command line."""
+    monkeypatch.setattr(cli, "INSTALLED_FRIDA_VERSION", None)
+
+    with pytest.raises(SystemExit):
+        cli.download_gadget("arm64")
+
+
+def test_explicit_version_works_without_frida(monkeypatch, tmp_path):
+    """--frida-version makes the frida package unnecessary."""
+    monkeypatch.setattr(cli, "INSTALLED_FRIDA_VERSION", None)
+    monkeypatch.setattr(cli, "FILE_DIR", tmp_path)
+    asked = {}
+
+    monkeypatch.setattr(cli, "FridaGithub", recording_github(asked))
+    with pytest.raises(FileNotFoundError):
+        cli.download_gadget("arm64", frida_version="16.1.3")
+
+    assert asked["version"] == "16.1.3"
