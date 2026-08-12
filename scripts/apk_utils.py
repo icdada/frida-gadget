@@ -13,26 +13,38 @@ LAUNCHER_CATEGORY = "android.intent.category.LAUNCHER"
 
 
 def android_attr(element, name: str):
-    """Read an 'android:' namespaced attribute off a manifest element.
+    """
+    Read an 'android:' namespaced attribute off a manifest element.
 
-    Args:
-        element: manifest element
-        name (str): attribute name without the namespace
+    Parameters
+    ----------
+    element : xml.etree.ElementTree.Element
+        manifest element
+    name : str
+        attribute name without the namespace
 
-    Returns:
-        str: the attribute value, or None when it is absent
+    Returns
+    -------
+    str
+        the attribute value, or None when it is absent
+
     """
     return element.get(ANDROID_NS + name)
 
 
 def iter_activities(apk: APK):
-    """Yield every activity and activity-alias declared in the manifest.
+    """
+    Yield every activity and activity-alias declared in the manifest.
 
-    Args:
-        apk (APK): parsed apk file
+    Parameters
+    ----------
+    apk : APK
+        parsed apk file
 
-    Yields:
+    Yields
+    ------
         the manifest elements, skipping the ones that are explicitly disabled
+
     """
     for manifest in apk.xml.values():
         if manifest is None:
@@ -49,16 +61,22 @@ def iter_activities(apk: APK):
 
 
 def resolve_activity_name(element):
-    """Resolve the class an activity entry points at.
+    """
+    Resolve the class an activity entry points at.
 
     An activity-alias points at another activity through 'targetActivity',
     which is the class that actually has to be patched.
 
-    Args:
-        element: manifest element of an activity or activity-alias
+    Parameters
+    ----------
+    element : xml.etree.ElementTree.Element
+        manifest element of an activity or activity-alias
 
-    Returns:
-        str: the class name, or None when the entry has neither attribute
+    Returns
+    -------
+    str
+        the class name, or None when the entry has neither attribute
+
     """
     activity = android_attr(element, "name")
     target_activity = android_attr(element, "targetActivity")
@@ -70,15 +88,23 @@ def resolve_activity_name(element):
 
 
 def declares(element, tag: str, value: str) -> bool:
-    """Check whether an activity declares an intent filter entry.
+    """
+    Check whether an activity declares an intent filter entry.
 
-    Args:
-        element: manifest element of an activity or activity-alias
-        tag (str): child tag to look at, 'action' or 'category'
-        value (str): the android:name the child has to carry
+    Parameters
+    ----------
+    element : xml.etree.ElementTree.Element
+        manifest element of an activity or activity-alias
+    tag : str
+        child tag to look at, 'action' or 'category'
+    value : str
+        the android:name the child has to carry
 
-    Returns:
-        bool: True when at least one child matches
+    Returns
+    -------
+    bool
+        True when at least one child matches
+
     """
     return any(
         android_attr(child, "name") == value for child in element.findall(f".//{tag}")
@@ -86,15 +112,21 @@ def declares(element, tag: str, value: str) -> bool:
 
 
 def get_main_activity(apk: APK):
-    """Find the activity the launcher starts.
+    """
+    Find the activity the launcher starts.
 
-    Args:
-        apk (APK): parsed apk file
+    Parameters
+    ----------
+    apk : APK
+        parsed apk file
 
-    Returns:
-        str: the main activity class name,
-             None when the manifest declares none,
-             -1 when it declares more than one
+    Returns
+    -------
+    str
+        the main activity class name,
+        None when the manifest declares none,
+        -1 when it declares more than one
+
     """
     mains = set()
     launchers = set()

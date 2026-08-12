@@ -47,6 +47,7 @@ def test_stdin_that_was_closed(monkeypatch):
     """A closed stream raises rather than answering isatty()."""
     class Closed:  # pylint: disable=too-few-public-methods
         """Raises the way a closed file object does."""
+
         def isatty(self):
             """Fail the way a closed stream does."""
             raise ValueError("I/O operation on closed file")
@@ -103,6 +104,7 @@ def _popen_recorder(captured):
     """Build a Popen stand-in recording how the signer was wired up."""
     class FakeProcess:
         """Reports a successful, silent run."""
+
         returncode = 0
 
         def __enter__(self):

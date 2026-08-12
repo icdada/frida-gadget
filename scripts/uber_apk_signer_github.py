@@ -24,7 +24,8 @@ class UberApkSignerGithub:
         self.request_cache = {}
 
     def _call(self, endpoint: str) -> dict:
-        """Make a call to Github and cache the response.
+        """
+        Make a call to Github and cache the response.
 
         :param endpoint:
         :return:
@@ -43,7 +44,8 @@ class UberApkSignerGithub:
         return results
 
     def get_assets(self) -> dict:
-        """Get the assets for the currently selected signer_version.
+        """
+        Get the assets for the currently selected signer_version.
 
         :return:
         """
@@ -59,7 +61,8 @@ class UberApkSignerGithub:
         return assets['assets']
 
     def download_asset(self, url: str, output_file: str) -> None:
-        """Download an asset from Github.
+        """
+        Download an asset from Github.
 
         :param url:
         :param output_file:
@@ -76,7 +79,8 @@ class UberApkSignerGithub:
                     asset.write(chunk)
 
     def download_signer_jar(self, assets: list, signer_fullpath: str) -> str:
-        """Download the signer jar library from Github.
+        """
+        Download the signer jar library from Github.
 
         :param assets:
         :param signer_path:

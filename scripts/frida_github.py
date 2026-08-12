@@ -34,7 +34,8 @@ class FridaGithub:
 
     @classmethod
     def parse_repo(cls, github_repo: str) -> str:
-        """Turn a repository reference into a Github API base URL.
+        """
+        Turn a repository reference into a Github API base URL.
 
         :param github_repo: 'owner/repo' or a github.com URL, empty for frida/frida
         :return:
@@ -52,7 +53,8 @@ class FridaGithub:
 
     @property
     def latest_release_url(self) -> str:
-        """Endpoint of the latest release of the selected repository.
+        """
+        Endpoint of the latest release of the selected repository.
 
         :return:
         """
@@ -60,14 +62,16 @@ class FridaGithub:
 
     @property
     def tagged_release_url(self) -> str:
-        """Endpoint template of a tagged release of the selected repository.
+        """
+        Endpoint template of a tagged release of the selected repository.
 
         :return:
         """
         return f'{self.github_api_base}/releases/tags/{{tag}}'
 
     def _call(self, endpoint: str) -> dict:
-        """Make a call to Github and cache the response.
+        """
+        Make a call to Github and cache the response.
 
         :param endpoint:
         :return:
@@ -86,7 +90,8 @@ class FridaGithub:
         return results
 
     def get_latest_version(self) -> str:
-        """Call Github and get the tag_name of the latest release.
+        """
+        Call Github and get the tag_name of the latest release.
 
         :return:
         """
@@ -95,7 +100,8 @@ class FridaGithub:
         return self.gadget_version
 
     def get_assets(self) -> dict:
-        """Get the assets for the currently selected gadget_version.
+        """
+        Get the assets for the currently selected gadget_version.
 
         :return:
         """
@@ -109,7 +115,8 @@ class FridaGithub:
         return assets['assets']
 
     def download_asset(self, url: str, output_file: str) -> None:
-        """Download an asset from Github.
+        """
+        Download an asset from Github.
 
         :param url:
         :param output_file:
@@ -128,7 +135,8 @@ class FridaGithub:
                     asset.write(chunk)
 
     def download_gadget_so(self, url, gadget_fullpath: str) -> str:
-        """Download the gadget library from Github.
+        """
+        Download the gadget library from Github.
 
         :param gadget_path:
         :return:

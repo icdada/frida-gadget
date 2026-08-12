@@ -13,13 +13,19 @@ APKTOOL = which("apktool")
 
 
 def get_decompiled_path(apk_path: Path) -> Path:
-    """Build the path apktool decompiles the APK into.
+    """
+    Build the path apktool decompiles the APK into.
 
-    Args:
-        apk_path (Path): path of apk file
+    Parameters
+    ----------
+    apk_path : Path
+        path of apk file
 
-    Returns:
-        Path: the decompile directory, next to the APK file
+    Returns
+    -------
+    Path
+        the decompile directory, next to the APK file
+
     """
     resolved = apk_path.resolve()
     decompiled_path = resolved.with_suffix("")
@@ -30,16 +36,22 @@ def get_decompiled_path(apk_path: Path) -> Path:
 
 
 def is_reusable_decompile_dir(path: Path) -> bool:
-    """Check whether a decompile directory can be safely removed.
+    """
+    Check whether a decompile directory can be safely removed.
 
     Only empty directories and previous apktool outputs are reusable, so an
     unrelated directory that happens to share the APK name is never deleted.
 
-    Args:
-        path (Path): path of the decompile directory
+    Parameters
+    ----------
+    path : Path
+        path of the decompile directory
 
-    Returns:
-        bool: True if the directory can be removed
+    Returns
+    -------
+    bool
+        True if the directory can be removed
+
     """
     if not path.is_dir():
         return False
@@ -58,16 +70,24 @@ def is_reusable_decompile_dir(path: Path) -> bool:
 
 
 def resolve_apktool(apktool_path: str = None) -> str:
-    """Work out the apktool command to run.
+    """
+    Work out the apktool command to run.
 
-    Args:
-        apktool_path (str): path or command given with --apktool-path
+    Parameters
+    ----------
+    apktool_path : str
+        path or command given with --apktool-path
 
-    Returns:
-        str: the command to invoke apktool with
+    Returns
+    -------
+    str
+        the command to invoke apktool with
 
-    Raises:
-        FileNotFoundError: apktool is neither given nor on PATH
+    Raises
+    ------
+    FileNotFoundError
+        apktool is neither given nor on PATH
+
     """
     if not apktool_path:
         if not APKTOOL:
@@ -95,12 +115,18 @@ def resolve_apktool(apktool_path: str = None) -> str:
 
 
 def run_apktool(option: list, apk_path: str, apktool: str = None):
-    """Run apktool with option.
+    """
+    Run apktool with option.
 
-    Args:
-        option (list|str): option of apktool
-        apk_path (str): path of apk file
-        apktool (str): command to invoke apktool with, defaults to the one on PATH
+    Parameters
+    ----------
+    option : list|str
+        option of apktool
+    apk_path : str
+        path of apk file
+    apktool : str
+        command to invoke apktool with, defaults to the one on PATH
+
     """
     pipe = subprocess.PIPE
     cmd = (apktool or APKTOOL).split() + option + [apk_path]
@@ -130,16 +156,22 @@ def run_apktool(option: list, apk_path: str, apktool: str = None):
 
 
 def restore_original_dex(apk_path, recompiled_apk_path, modified_dex_number):
-    """Put the original dex files back into the recompiled APK.
+    """
+    Put the original dex files back into the recompiled APK.
 
     apktool reassembles every dex file, which can change classes it was never
     asked to touch. Only the dex holding the patched main activity has to come
     from the rebuild; the rest are copied over from the original APK.
 
-    Args:
-        apk_path (Path): path of the original apk file
-        recompiled_apk_path (Path): path of the apk apktool produced
-        modified_dex_number (int): smali_classes<N> the main activity lives in
+    Parameters
+    ----------
+    apk_path : Path
+        path of the original apk file
+    recompiled_apk_path : Path
+        path of the apk apktool produced
+    modified_dex_number : int
+        smali_classes<N> the main activity lives in
+
     """
     logger.debug(
         "Copying original dex files (except modified one %s) to the recompiled APK",
@@ -188,10 +220,14 @@ def restore_original_dex(apk_path, recompiled_apk_path, modified_dex_number):
 
 
 def prepare_decompile_dir(decompiled_path: Path):
-    """Make sure the decompile target is an empty directory we may write to.
+    """
+    Make sure the decompile target is an empty directory we may write to.
 
-    Args:
-        decompiled_path (Path): the decompile directory
+    Parameters
+    ----------
+    decompiled_path : Path
+        the decompile directory
+
     """
     if decompiled_path.exists():
         if not is_reusable_decompile_dir(decompiled_path):
@@ -211,16 +247,25 @@ def prepare_decompile_dir(decompiled_path: Path):
 def build_decompile_options(
     decompiled_path: Path, force_manifest: bool, no_res: bool, decompile_opts: str
 ):
-    """Assemble the apktool decode command line.
+    """
+    Assemble the apktool decode command line.
 
-    Args:
-        decompiled_path (Path): where apktool should write the decompiled APK
-        force_manifest (bool): whether --force-manifest was given
-        no_res (bool): whether --no-res was given
-        decompile_opts (str): extra options given with --decompile-opts
+    Parameters
+    ----------
+    decompiled_path : Path
+        where apktool should write the decompiled APK
+    force_manifest : bool
+        whether --force-manifest was given
+    no_res : bool
+        whether --no-res was given
+    decompile_opts : str
+        extra options given with --decompile-opts
 
-    Returns:
-        tuple: the option list, and no_res updated from --decompile-opts
+    Returns
+    -------
+    tuple
+        the option list, and no_res updated from --decompile-opts
+
     """
     options = ["d", "-o", str(decompiled_path.resolve()), "--force"]
     if force_manifest:
