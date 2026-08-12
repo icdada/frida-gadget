@@ -490,6 +490,18 @@ def inject_gadget_into_apk(
     return insert_loadlibary(decompiled_path, main_activity, load_library_name)
 
 
+def stdin_is_interactive():
+    """Check whether a child process could prompt on this stdin
+
+    Returns:
+        bool: True if stdin is attached to a terminal
+    """
+    try:
+        return sys.stdin is not None and sys.stdin.isatty()
+    except ValueError:  # stdin was already closed
+        return False
+
+
 def redact_passwords(cmd: list):
     """Hide keystore passwords in a command line before it is reported
 
@@ -544,7 +556,15 @@ def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: s
 
     # uber-apk-signer prompts for the passwords that were not provided,
     # which only works while it owns the terminal.
-    interactive = bool(ks) and not (ks_pass and ks_key_pass)
+    needs_prompt = bool(ks) and not (ks_pass and ks_key_pass)
+    interactive = needs_prompt and stdin_is_interactive()
+    if needs_prompt and not interactive:
+        logger.warning(
+            "There is no terminal attached, so uber-apk-signer cannot prompt for "
+            "the missing keystore password.\n"
+            "Run this from a terminal, or pass --ks-pass and --ks-key-pass."
+        )
+
     stdio = None if interactive else subprocess.PIPE
 
     with subprocess.Popen(
