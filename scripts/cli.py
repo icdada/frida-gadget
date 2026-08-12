@@ -131,6 +131,23 @@ def download_gadget(
         custom_gadget_path (str): path to custom frida gadget file
         github_repo (str): custom GitHub repository for the frida gadget
     """
+    # A custom gadget is used as-is, so the frida version is irrelevant here
+    if custom_gadget_path:
+        logger.info("Using custom Frida gadget file: %s", custom_gadget_path)
+
+        source = Path(custom_gadget_path)
+        if source.suffix != ".so":
+            raise ValueError(
+                f"The custom gadget must be an uncompressed '.so' file, got '{source.name}'.\n"
+                "Frida publishes the gadget as '.so.xz', so decompress it first."
+            )
+
+        # FILE_DIR is normally created while downloading, which we skip here
+        FILE_DIR.mkdir(parents=True, exist_ok=True)
+        so_gadget_path = str(FILE_DIR.joinpath(f"frida-gadget-custom-{arch}.so"))
+        shutil.copy2(source, so_gadget_path)
+        return so_gadget_path
+
     if frida_version:
         logger.info("Using specified frida version: %s", frida_version)
         version = frida_version
@@ -138,19 +155,8 @@ def download_gadget(
         logger.info("Auto-detected your frida version: %s", INSTALLED_FRIDA_VERSION)
         version = INSTALLED_FRIDA_VERSION
 
-    if custom_gadget_path:
-        logger.info("Using custom Frida gadget file: %s", custom_gadget_path)
-
-        file_ext = Path(custom_gadget_path).suffix
-        dest_filename = (
-            f"frida-gadget-custom-{arch}{file_ext}"
-            if file_ext
-            else f"frida-gadget-custom-{arch}.so"
-        )
-        so_gadget_path = str(FILE_DIR.joinpath(dest_filename))
-
-        shutil.copy2(custom_gadget_path, so_gadget_path)
-        return so_gadget_path
+    if github_repo:
+        logger.info("Using custom GitHub repository: %s", github_repo)
 
     frida_github = FridaGithub(version, github_repo)
     assets = frida_github.get_assets()
@@ -812,6 +818,15 @@ def run(
         arch = "arm64"
     elif arch == "armeabi-v7a":
         arch = "arm"
+
+    # A single library file only matches one ABI, so it cannot serve every
+    # architecture found in the APK
+    if custom_gadget_path and arch == "multi-arch":
+        logger.error(
+            "The --custom-gadget-path option cannot be combined with '--arch multi-arch'.\n"
+            "Run the command once per architecture instead."
+        )
+        sys.exit(-1)
 
     # Validate js-delay option
     if js_delay is not None:

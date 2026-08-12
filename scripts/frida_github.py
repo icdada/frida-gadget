@@ -2,15 +2,23 @@
 # Base code is sourced from the GitHub repository of Objection.
 # Source: https://github.com/sensepost/objection/blob/master/objection/utils/patchers/github.py
 import lzma
+import re
 from pathlib import Path
 import requests
-import re
 
 class FridaGithub:
     """ Interact with Github """
 
-    DEFAULT_GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/frida/frida/releases/latest'
-    DEFAULT_GITHUB_TAGGED_RELEASE = 'https://api.github.com/repos/frida/frida/releases/tags/{tag}'
+    DEFAULT_GITHUB_API_BASE = 'https://api.github.com/repos/frida/frida'
+
+    # 'owner/repo', or a github.com URL with an optional scheme, 'www.',
+    # '.git' suffix and trailing slash. Any other host is rejected so a
+    # typo cannot send the request somewhere unexpected.
+    GITHUB_REPO_PATTERN = re.compile(
+        r'^(?:(?:https?://)?(?:www\.)?github\.com/)?'
+        r'(?P<owner>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)/'
+        r'(?P<repo>[A-Za-z0-9._-]+?)(?:\.git)?/?$'
+    )
 
     # the 'context' of this Github instance
     gadget_version = None
@@ -23,26 +31,29 @@ class FridaGithub:
 
         if gadget_version:
             self.gadget_version = gadget_version
-            
-        # Set GitHub API base URL based on custom repo or default
-        if github_repo:
-            if github_repo.startswith(('https://', 'github.com')):
-                match = re.search(r'\.com/([^/]+)/([^/]+)', github_repo)
-                if match:
-                    owner, repo = match.groups()
-                    self.github_api_base = f'https://api.github.com/repos/{owner}/{repo}'
-                else:
-                    raise ValueError(f"Invalid GitHub repository URL: {github_repo}")
-            else:
-                # Just owner/repo provided
-                if '/' in github_repo:
-                    self.github_api_base = f'https://api.github.com/repos/{github_repo}'
-                else:
-                    raise ValueError(f"Invalid GitHub repository format (expected 'owner/repo'): {github_repo}")
-        else:
-            self.github_api_base = 'https://api.github.com/repos/frida/frida'
-            
+
+        self.github_api_base = self.parse_repo(github_repo)
         self.request_cache = {}
+
+    @classmethod
+    def parse_repo(cls, github_repo: str) -> str:
+        """
+            Turn a repository reference into a Github API base URL.
+
+            :param github_repo: 'owner/repo' or a github.com URL, empty for frida/frida
+            :return:
+        """
+
+        if not github_repo:
+            return cls.DEFAULT_GITHUB_API_BASE
+
+        match = cls.GITHUB_REPO_PATTERN.match(github_repo.strip())
+        if not match:
+            raise ValueError(
+                'Invalid GitHub repository '
+                f'(expected \'owner/repo\' or a github.com URL): {github_repo}')
+
+        return f'https://api.github.com/repos/{match.group("owner")}/{match.group("repo")}'
 
     @property
     def GITHUB_LATEST_RELEASE(self):
