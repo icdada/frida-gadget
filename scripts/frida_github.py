@@ -115,7 +115,8 @@ class FridaGithub:
         :param output_file:
         :return:
         """
-        assert output_file.endswith('.xz')
+        if not output_file.endswith('.xz'):
+            raise ValueError(f'The asset must be downloaded to a .xz path, got {output_file!r}.')
         filepath = Path(output_file)
         if filepath.exists() and filepath.stat().st_size > 0:
             return
@@ -132,7 +133,8 @@ class FridaGithub:
         :param gadget_path:
         :return:
         """
-        assert gadget_fullpath.endswith('.so')
+        if not gadget_fullpath.endswith('.so'):
+            raise ValueError(f'The gadget must be written to a .so path, got {gadget_fullpath!r}.')
         gadget_path = Path(gadget_fullpath)
         download_directory = gadget_path.parent
         if gadget_path.exists():

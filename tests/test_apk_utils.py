@@ -112,7 +112,7 @@ def test_empty_manifest():
 
 
 def test_none_manifest_entries_are_skipped():
-    """androguard stores None for manifests it could not parse."""
+    """Manifests androguard could not parse are stored as None."""
     apk = fake_apk(f'<activity android:name="com.e.Main">{LAUNCHER_FILTER}</activity>')
     apk.xml["broken.xml"] = None
     assert get_main_activity(apk) == "com.e.Main"

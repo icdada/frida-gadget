@@ -11,6 +11,7 @@ from scripts import cli
 class FakeStdin:  # pylint: disable=too-few-public-methods
     """Stand-in for sys.stdin with a controllable isatty()."""
     def __init__(self, tty):
+        """Record whether this stream should look like a terminal."""
         self.tty = tty
 
     def isatty(self):
@@ -64,7 +65,7 @@ def test_unrelated_directory_is_not_reusable(tmp_path):
 
 
 def test_regular_file_is_not_reusable(tmp_path):
-    """rmtree cannot be pointed at a file."""
+    """A file cannot be handed to rmtree."""
     target = tmp_path / "plain"
     target.write_text("x", encoding="utf-8")
     assert cli.is_reusable_decompile_dir(target) is False

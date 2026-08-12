@@ -82,15 +82,18 @@ class UberApkSignerGithub:
         :param signer_path:
         :return:
         """
-        assert len(assets) == 2, 'Unable to determine the correct asset to download.'
-        assert signer_fullpath.endswith('.jar'), 'Signer path must end with .jar'
+        if len(assets) != 2:
+            raise ValueError('Unable to determine the correct asset to download.')
+        if not signer_fullpath.endswith('.jar'):
+            raise ValueError('Signer path must end with .jar')
 
         checksum_download_url = assets[0]['browser_download_url']
         uber_apk_signer_download_url = assets[1]['browser_download_url']
         if assets[1]['name'] == 'checksum-sha256.txt':
             checksum_download_url, uber_apk_signer_download_url = \
                 uber_apk_signer_download_url, checksum_download_url
-        assert uber_apk_signer_download_url.endswith('.jar'), 'Download URL must end with .jar'
+        if not uber_apk_signer_download_url.endswith('.jar'):
+            raise ValueError('Download URL must end with .jar')
 
         signer_path = Path(signer_fullpath)
         download_directory = signer_path.parent
