@@ -79,7 +79,8 @@ def test_decompile_options_carry_the_flags(tmp_path):
     options, no_res = cli.build_decompile_options(tmp_path, True, True, None)
 
     assert options[:2] == ["d", "-o"]
-    assert "--force" in options and "--force-manifest" in options
+    assert "--force" in options
+    assert "--force-manifest" in options
     assert "--no-res" in options
     assert no_res is True
 
@@ -344,7 +345,8 @@ def test_passwords_are_redacted():
 
     redacted = cli.redact_passwords(cmd)
 
-    assert "hunter2" not in redacted and "s3cr3t" not in redacted
+    assert "hunter2" not in redacted
+    assert "s3cr3t" not in redacted
     assert redacted.count("***") == 2
     assert cmd[-1] == "s3cr3t", "the original command must not be modified"
 

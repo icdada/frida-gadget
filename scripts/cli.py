@@ -22,6 +22,7 @@ import zipfile
 from shutil import which
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 import click
 from androguard.core.apk import APK
 from .apk_utils import get_main_activity
@@ -632,10 +633,10 @@ class GadgetSource:
         github_repo (str): repository given with --github-repo
     """
 
-    custom_gadget_name: str = None
-    custom_gadget_path: str = None
-    frida_version: str = None
-    github_repo: str = None
+    custom_gadget_name: Optional[str] = None
+    custom_gadget_path: Optional[str] = None
+    frida_version: Optional[str] = None
+    github_repo: Optional[str] = None
 
 
 # The parameters mirror the CLI flags that reach the injection step
@@ -1117,7 +1118,8 @@ def wrap_js_file(js: str, js_delay: int) -> str:
         temp_dir = tempfile.mkdtemp(prefix="frida-gadget-")
         atexit.register(shutil.rmtree, temp_dir, True)
         temp_js = Path(temp_dir).joinpath("wrapped.js")
-        temp_js.write_text(wrapped_content, encoding="utf-8")
+        with open(temp_js, "w", encoding="utf-8") as wrapped_file:
+            wrapped_file.write(wrapped_content)
     except (OSError, UnicodeDecodeError) as e:
         logger.error("Failed to process JavaScript file: %s", str(e))
         sys.exit(-1)
@@ -1232,7 +1234,8 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
     help="Show the version and exit.",
 )
 @click.argument("apk_path", type=click.Path(exists=True), required=True)
-def run(  # NOSONAR: one parameter per CLI flag
+# One parameter per CLI flag, so the count is dictated by the options above
+def run(  # NOSONAR
     apk_path: str,
     arch: str,
     config: str,
