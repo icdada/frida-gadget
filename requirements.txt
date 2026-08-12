@@ -1,8 +1,5 @@
-click
 androguard >= 4.0.0
-apk-signer
-pytest
+click
 colorlog
-coverage
-pylint
+frida
 requests
