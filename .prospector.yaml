@@ -1,0 +1,7 @@
+# D212 and D213 contradict each other: one wants a multi-line docstring's
+# summary on the first line, the other on the second. Any docstring that
+# documents its parameters is multi-line, so it always breaks one of them.
+# This project follows D213, so D212 is turned off.
+pydocstyle:
+  disable:
+    - D212
