@@ -51,6 +51,8 @@ Usage
          --js-delay INTEGER         Specify seconds to wait before executing the JavaScript file.
          --force-manifest           Force modify AndroidManifest.xml even if it already has required permissions.
          --custom-gadget-name TEXT  Specify a custom name for the Frida gadget.
+         --custom-gadget-path TEXT  Use a custom Frida gadget library file instead of downloading from GitHub.
+         --github-repo TEXT         Specify a custom GitHub repository for downloading Frida gadget (e.g., username/repo-name or full URL).
          --no-res                   Skip decoding resources.
          --main-activity TEXT       Specify the main activity if known.
          --sign                     Automatically sign the APK using uber-apk-signer.
@@ -90,6 +92,58 @@ How do I begin?
       [DEBUG] Recompiling the new APK using apktool
       ...
       [INFO] APK signing finished: ./target/dist/target-aligned-debugSigned.apk (72.78 MiB)
+
+Using Custom Frida Gadget File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| You can also provide your own custom Frida gadget file instead of downloading from GitHub.
+| This is useful when you need to use a custom compiled gadget or when you want to work offline.
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --custom-gadget-path /path/to/your/frida-gadget.so --sign
+      [INFO] APK: '[REDACTED]/demo-apk/target.apk'
+      [INFO] Gadget Architecture(--arch): arm64(default)
+      [INFO] Using custom Frida gadget file: /path/to/your/frida-gadget.so
+      ...
+
+| The file must be an uncompressed ``.so`` built for the architecture you pass to
+  ``--arch``. Frida publishes the gadget as ``.so.xz``, so decompress it first.
+| Because one library only matches one ABI, ``--custom-gadget-path`` cannot be
+  combined with ``--arch multi-arch``; run the command once per architecture.
+|
+
+Using Custom GitHub Repository
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| You can also specify a custom GitHub repository to download the Frida gadget from.
+| This is useful when you need to use a custom or forked version of Frida.
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --github-repo myuser/my-frida-fork --sign
+      [INFO] APK: '[REDACTED]/demo-apk/target.apk'
+      [INFO] Gadget Architecture(--arch): arm64(default)
+      [INFO] Auto-detected your frida version: 16.1.3
+      [INFO] Using custom GitHub repository: myuser/my-frida-fork
+      [DEBUG] Downloading the frida gadget library(16.1.3) for arm64
+      ...
+
+| Or you can specify a full URL to the repository:
+|
+
+.. code:: sh
+
+    $ frida-gadget target.apk --github-repo https://github.com/myuser/my-frida-fork --sign
+      [INFO] Using custom GitHub repository: https://github.com/myuser/my-frida-fork
+      ...
+
+| The repository must publish its releases the same way frida does: a release
+  tagged with the version being used, holding an asset named
+  ``frida-gadget-<version>-android-<arch>.so.xz``. Otherwise the download fails
+  with ``not found in the github releases``.
+| Only ``github.com`` repositories are accepted, given either as ``owner/repo``
+  or as a github.com URL.
 
 With Docker
 ~~~~~~~~~~~~~~~~~~

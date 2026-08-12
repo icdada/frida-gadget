@@ -2,19 +2,29 @@
 # Base code is sourced from the GitHub repository of Objection.
 # Source: https://github.com/sensepost/objection/blob/master/objection/utils/patchers/github.py
 import lzma
+import re
 from pathlib import Path
 import requests
 
 class FridaGithub:
     """ Interact with Github """
 
-    GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/frida/frida/releases/latest'
-    GITHUB_TAGGED_RELEASE = 'https://api.github.com/repos/frida/frida/releases/tags/{tag}'
+    DEFAULT_GITHUB_API_BASE = 'https://api.github.com/repos/frida/frida'
+
+    # 'owner/repo', or a github.com URL with an optional scheme, 'www.',
+    # '.git' suffix and trailing slash. Any other host is rejected so a
+    # typo cannot send the request somewhere unexpected.
+    GITHUB_REPO_PATTERN = re.compile(
+        r'^(?:(?:https?://)?(?:www\.)?github\.com/)?'
+        r'(?P<owner>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)/'
+        r'(?P<repo>[A-Za-z0-9._-]+?)(?:\.git)?/?$'
+    )
 
     # the 'context' of this Github instance
     gadget_version = None
+    github_api_base = None
 
-    def __init__(self, gadget_version: str = None):
+    def __init__(self, gadget_version: str = "", github_repo: str = ""):
         """
             Init a new instance of Github
         """
@@ -22,7 +32,36 @@ class FridaGithub:
         if gadget_version:
             self.gadget_version = gadget_version
 
+        self.github_api_base = self.parse_repo(github_repo)
         self.request_cache = {}
+
+    @classmethod
+    def parse_repo(cls, github_repo: str) -> str:
+        """
+            Turn a repository reference into a Github API base URL.
+
+            :param github_repo: 'owner/repo' or a github.com URL, empty for frida/frida
+            :return:
+        """
+
+        if not github_repo:
+            return cls.DEFAULT_GITHUB_API_BASE
+
+        match = cls.GITHUB_REPO_PATTERN.match(github_repo.strip())
+        if not match:
+            raise ValueError(
+                'Invalid GitHub repository '
+                f'(expected \'owner/repo\' or a github.com URL): {github_repo}')
+
+        return f'https://api.github.com/repos/{match.group("owner")}/{match.group("repo")}'
+
+    @property
+    def GITHUB_LATEST_RELEASE(self):
+        return f'{self.github_api_base}/releases/latest'
+
+    @property
+    def GITHUB_TAGGED_RELEASE(self):
+        return f'{self.github_api_base}/releases/tags/{{tag}}'
 
     def _call(self, endpoint: str) -> dict:
         """

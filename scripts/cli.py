@@ -117,13 +117,37 @@ def run_apktool(option: list, apk_path: str):
         return True
 
 
-def download_gadget(arch: str, frida_version: str = None):
-    """Download the frida gadget library
+def download_gadget(
+    arch: str,
+    frida_version: str = None,
+    custom_gadget_path: str = None,
+    github_repo: str = None,
+):
+    """Download the frida gadget library or use a custom file
 
     Args:
         arch (str): architecture of the device
         frida_version (str): specific frida version to use
+        custom_gadget_path (str): path to custom frida gadget file
+        github_repo (str): custom GitHub repository for the frida gadget
     """
+    # A custom gadget is used as-is, so the frida version is irrelevant here
+    if custom_gadget_path:
+        logger.info("Using custom Frida gadget file: %s", custom_gadget_path)
+
+        source = Path(custom_gadget_path)
+        if source.suffix != ".so":
+            raise ValueError(
+                f"The custom gadget must be an uncompressed '.so' file, got '{source.name}'.\n"
+                "Frida publishes the gadget as '.so.xz', so decompress it first."
+            )
+
+        # FILE_DIR is normally created while downloading, which we skip here
+        FILE_DIR.mkdir(parents=True, exist_ok=True)
+        so_gadget_path = str(FILE_DIR.joinpath(f"frida-gadget-custom-{arch}.so"))
+        shutil.copy2(source, so_gadget_path)
+        return so_gadget_path
+
     if frida_version:
         logger.info("Using specified frida version: %s", frida_version)
         version = frida_version
@@ -131,7 +155,10 @@ def download_gadget(arch: str, frida_version: str = None):
         logger.info("Auto-detected your frida version: %s", INSTALLED_FRIDA_VERSION)
         version = INSTALLED_FRIDA_VERSION
 
-    frida_github = FridaGithub(version)
+    if github_repo:
+        logger.info("Using custom GitHub repository: %s", github_repo)
+
+    frida_github = FridaGithub(version, github_repo)
     assets = frida_github.get_assets()
     file = f"frida-gadget-{version}-android-{arch}.so.xz"
     for asset in assets:
@@ -304,15 +331,17 @@ def detect_apk_architectures(decompiled_path):
 def inject_gadget_into_apk(
     apk_path: str,
     arch: str,
-    decompiled_path: str,
-    no_res,
-    force_manifest,
+    decompiled_path: Path,
+    no_res: bool,
+    force_manifest: bool,
     main_activity: str = None,
     config: str = None,
     js: str = None,
     custom_gadget_name: str = None,
+    custom_gadget_path: str = None,
     frida_version: str = None,
-):
+    github_repo: str = None,
+) -> int:
     """Inject frida gadget into an APK
 
     Args:
@@ -362,7 +391,9 @@ def inject_gadget_into_apk(
         modify_manifest(decompiled_path)
 
     for current_arch in archs:
-        gadget_path = download_gadget(current_arch, frida_version)
+        gadget_path = download_gadget(
+            current_arch, frida_version, custom_gadget_path, github_repo
+        )
         gadget_name = Path(gadget_path).name
 
         # Apply custom gadget name if provided
@@ -413,6 +444,11 @@ def inject_gadget_into_apk(
                 if "interaction" not in config_data:
                     logger.error("The config file must contain an 'interaction' key.")
                     sys.exit(-1)
+                if "type" not in config_data["interaction"]:
+                    logger.error(
+                        "The config file must contain an 'interaction.type' key."
+                    )
+                    sys.exit(-1)
                 if "path" in config_data["interaction"]:
                     logger.debug(
                         "Updating the script path in '%s' from '%s' to 'lib%s.script.so'",
@@ -458,13 +494,23 @@ def inject_gadget_into_apk(
                 if "interaction" not in config_data:
                     logger.error("The config file must contain an 'interaction' key.")
                     sys.exit(-1)
-                if "path" not in config_data["interaction"]:
-                    logger.error("The config file must contain a 'path' key.")
+                if "type" not in config_data["interaction"]:
+                    logger.error(
+                        "The config file must contain an 'interaction.type' key."
+                    )
                     sys.exit(-1)
-                logger.warning(
-                    "The script file must be located at '%s' on your device",
-                    config_data["interaction"]["path"],
-                )
+                if config_data["interaction"]["type"] in (
+                    "script-directory", "script"
+                ):
+                    if "path" not in config_data["interaction"]:
+                        logger.error(
+                            "The config file must contain a 'interaction.path' key with 'type: script' or 'type: script-directory'"
+                        )
+                        sys.exit(-1)
+                    logger.warning(
+                        "The script file must be located at '%s' on your Android device",
+                        config_data["interaction"]["path"],
+                    )
 
         for file_type, file_path in upload_files.items():
             if file_path:
@@ -507,7 +553,13 @@ def redact_passwords(cmd: list):
     return redacted
 
 
-def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: str = None, ks_pass: str = None):
+def sign_apk(
+    apk_path: str,
+    ks: str = None,
+    ks_alias: str = None,
+    ks_key_pass: str = None,
+    ks_pass: str = None,
+):
     """Run uber apk signer with option
 
     Args:
@@ -673,6 +725,17 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
     default=None,
     help="Specify a custom name for the Frida gadget.",
 )
+@click.option(
+    "--custom-gadget-path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Use a custom Frida gadget library file instead of downloading from GitHub.",
+)
+@click.option(
+    "--github-repo",
+    default=None,
+    help="Specify a custom GitHub repository for downloading Frida gadget (e.g., username/repo-name or full URL).",
+)
 @click.option("--no-res", is_flag=True, help="Skip decoding resources.")
 @click.option(
     "--main-activity", default=None, help="Specify the main activity if known."
@@ -722,6 +785,7 @@ def run(
     main_activity: str,
     sign: bool,
     custom_gadget_name: str,
+    custom_gadget_path: str,
     js: str,
     js_delay: int,
     force_manifest: bool,
@@ -736,6 +800,7 @@ def run(
     ks_alias: str,
     ks_key_pass: str,
     ks_pass: str,
+    github_repo: str,
 ):
     """Patch an APK with the Frida gadget library"""
     apk_path = Path(apk_path)
@@ -753,6 +818,15 @@ def run(
         arch = "arm64"
     elif arch == "armeabi-v7a":
         arch = "arm"
+
+    # A single library file only matches one ABI, so it cannot serve every
+    # architecture found in the APK
+    if custom_gadget_path and arch == "multi-arch":
+        logger.error(
+            "The --custom-gadget-path option cannot be combined with '--arch multi-arch'.\n"
+            "Run the command once per architecture instead."
+        )
+        sys.exit(-1)
 
     # Validate js-delay option
     if js_delay is not None:
@@ -896,7 +970,9 @@ def run(
         config,
         js,
         custom_gadget_name,
+        custom_gadget_path,
         frida_version,
+        github_repo,
     )
 
     # Rebuild with apktool, print apk_path if process is success
@@ -929,7 +1005,9 @@ def run(
                     )
 
         # Copy original dex files except the modified one to the recompiled APK
-        logger.debug(f"Copying original dex files (except modified one {modified_dex_number}) to the recompiled APK")
+        logger.debug(
+            f"Copying original dex files (except modified one {modified_dex_number}) to the recompiled APK"
+        )
         try:
             # Create a temporary directory for extraction
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -951,8 +1029,11 @@ def run(
                 new_apk = zipfile.ZipFile(temp_file_path, 'w')
 
                 # Copy all files from recompiled APK except dex files
-                modified_dex_filename = f"classes{modified_dex_number}.dex" \
-                    if modified_dex_number and modified_dex_number > 1 else "classes.dex"
+                modified_dex_filename = (
+                    f"classes{modified_dex_number}.dex"
+                    if modified_dex_number and modified_dex_number > 1
+                    else "classes.dex"
+                )
 
                 for item in recompiled_apk.infolist():
                     if item.filename == modified_dex_filename:
