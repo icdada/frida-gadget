@@ -9,18 +9,25 @@ import requests
 class UberApkSignerGithub:
     """Interact with Github."""
 
-    GITHUB_LATEST_RELEASE = (
-        'https://api.github.com/repos/patrickfav/uber-apk-signer/releases/latest'
+    GITHUB_TAGGED_RELEASE = (
+        'https://api.github.com/repos/patrickfav/uber-apk-signer/releases/tags/v{tag}'
     )
+
+    # The signer is downloaded and then executed, so the release it comes from is
+    # pinned rather than resolved to whatever is newest. SIGNER_SHA256 is the hash
+    # the release publishes in checksum-sha256.txt, recorded here so a replaced
+    # release is rejected instead of trusted because it ships a matching checksum.
+    DEFAULT_SIGNER_VERSION = '1.3.0'
+    KNOWN_SIGNER_SHA256 = {
+        '1.3.0': 'e1299fd6fcf4da527dd53735b56127e8ea922a321128123b9c32d619bba1d835',
+    }
 
     # the 'context' of this Github instance
     signer_version = None
 
     def __init__(self, signer_version: str = None):
         """Init a new instance of Github."""
-        if signer_version:
-            self.signer_version = signer_version
-
+        self.signer_version = signer_version or self.DEFAULT_SIGNER_VERSION
         self.request_cache = {}
 
     def _call(self, endpoint: str) -> dict:
@@ -49,9 +56,7 @@ class UberApkSignerGithub:
 
         :return:
         """
-        assets = self._call(self.GITHUB_LATEST_RELEASE)
-
-        self.signer_version = assets['tag_name'][1:]
+        assets = self._call(self.GITHUB_TAGGED_RELEASE.format(tag=self.signer_version))
 
         if 'assets' not in assets:
             raise FileNotFoundError(
@@ -118,10 +123,12 @@ class UberApkSignerGithub:
             signer_data = signer_file.read()
             signer_hash = hashlib.sha256(signer_data).hexdigest()
 
-        if checksum != signer_hash:
+        expected = self.KNOWN_SIGNER_SHA256.get(self.signer_version, checksum)
+        if signer_hash not in (checksum, expected) or checksum != expected:
             os.remove(signer_fullpath)
             os.remove(check_sum_fullpath)
             raise ValueError(
-                'The downloaded uber-apk-signer-*.jar file does not match the checksum.')
+                f'uber-apk-signer {self.signer_version} does not match the expected '
+                f'sha256 {expected}, got {signer_hash}.')
 
         return signer_fullpath

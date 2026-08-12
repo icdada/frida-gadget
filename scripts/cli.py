@@ -390,8 +390,8 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
 )
 @click.argument("apk_path", type=click.Path(exists=True), required=True)
 # One parameter per CLI flag, so the count is dictated by the options above
-def run(  # NOSONAR
-    apk_path: str,
+def run(
+    apk_path: str,  # NOSONAR
     arch: str,
     config: str,
     no_res: bool,
