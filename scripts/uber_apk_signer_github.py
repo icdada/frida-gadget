@@ -9,7 +9,9 @@ import requests
 class UberApkSignerGithub:
     """ Interact with Github """
 
-    GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/patrickfav/uber-apk-signer/releases/latest'
+    GITHUB_LATEST_RELEASE = (
+        'https://api.github.com/repos/patrickfav/uber-apk-signer/releases/latest'
+    )
 
     # the 'context' of this Github instance
     signer_version = None
@@ -70,7 +72,7 @@ class UberApkSignerGithub:
             :param url:
             :param output_file:
             :return:
-        """        
+        """
         filepath = Path(output_file)
         if filepath.exists() and filepath.stat().st_size > 0:
             return
@@ -98,29 +100,30 @@ class UberApkSignerGithub:
             checksum_download_url, uber_apk_signer_download_url = \
                 uber_apk_signer_download_url, checksum_download_url
         assert uber_apk_signer_download_url.endswith('.jar'), 'Download URL must end with .jar'
-    
+
         signer_path = Path(signer_fullpath)
         download_directory = signer_path.parent
         if signer_path.exists():
             return signer_fullpath
 
         if not download_directory.exists():
-            download_directory.mkdir(parents=True, exist_ok=True)        
+            download_directory.mkdir(parents=True, exist_ok=True)
 
         check_sum_fullpath = signer_fullpath[:-4] + '.sha256'
         self.download_asset(checksum_download_url, check_sum_fullpath)
 
         with open(check_sum_fullpath, 'rb') as checksum_file:
             checksum = checksum_file.read(64).decode('utf-8')
-        
+
         self.download_asset(uber_apk_signer_download_url, signer_fullpath)
         with open(signer_fullpath, 'rb') as signer_file:
             signer_data = signer_file.read()
             signer_hash = hashlib.sha256(signer_data).hexdigest()
-        
+
         if checksum != signer_hash:
             os.remove(signer_fullpath)
             os.remove(check_sum_fullpath)
-            raise ValueError('The downloaded uber-apk-signer-*.jar file does not match the checksum.')
+            raise ValueError(
+                'The downloaded uber-apk-signer-*.jar file does not match the checksum.')
 
         return signer_fullpath

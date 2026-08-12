@@ -56,11 +56,23 @@ class FridaGithub:
         return f'https://api.github.com/repos/{match.group("owner")}/{match.group("repo")}'
 
     @property
-    def GITHUB_LATEST_RELEASE(self):
+    def latest_release_url(self) -> str:
+        """
+            Endpoint of the latest release of the selected repository.
+
+            :return:
+        """
+
         return f'{self.github_api_base}/releases/latest'
 
     @property
-    def GITHUB_TAGGED_RELEASE(self):
+    def tagged_release_url(self) -> str:
+        """
+            Endpoint template of a tagged release of the selected repository.
+
+            :return:
+        """
+
         return f'{self.github_api_base}/releases/tags/{{tag}}'
 
     def _call(self, endpoint: str) -> dict:
@@ -92,7 +104,7 @@ class FridaGithub:
             :return:
         """
 
-        self.gadget_version = self._call(self.GITHUB_LATEST_RELEASE)['tag_name']
+        self.gadget_version = self._call(self.latest_release_url)['tag_name']
 
         return self.gadget_version
 
@@ -103,7 +115,7 @@ class FridaGithub:
             :return:
         """
 
-        assets = self._call(self.GITHUB_TAGGED_RELEASE.format(tag=self.gadget_version))
+        assets = self._call(self.tagged_release_url.format(tag=self.gadget_version))
 
         if 'assets' not in assets:
             raise FileNotFoundError(
