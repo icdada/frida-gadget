@@ -6,18 +6,27 @@ from .logger import logger
 
 
 def find_activity_smali(decompiled_path, main_activity):
-    """Locate the smali file of an activity across the smali_classes* trees.
+    """
+    Locate the smali file of an activity across the smali_classes* trees.
 
-    Args:
-        decompiled_path (Path): decompiled path of apk file
-        main_activity (str): activity class name
+    Parameters
+    ----------
+    decompiled_path : Path
+        decompiled path of apk file
+    main_activity : str
+        activity class name
 
-    Returns:
-        tuple: the smali file path, and the smali_classes<N> number it sits in
-               (None for the plain 'smali' directory)
+    Returns
+    -------
+    tuple
+        the smali file path, and the smali_classes<N> number it sits in
+        (None for the plain 'smali' directory)
 
-    Raises:
-        FileNotFoundError: the activity has no smali file
+    Raises
+    ------
+    FileNotFoundError
+        the activity has no smali file
+
     """
     target_relative_path = main_activity.replace(".", os.sep) + ".smali"
 
@@ -40,14 +49,21 @@ def find_activity_smali(decompiled_path, main_activity):
 
 
 def insert_load_library_call(text: list, load_library_name: str) -> bool:
-    """Insert the loadLibrary call into the first usable entrypoint.
+    """
+    Insert the loadLibrary call into the first usable entrypoint.
 
-    Args:
-        text (list): lines of the smali file, modified in place
-        load_library_name (str): name passed to System.loadLibrary
+    Parameters
+    ----------
+    text : list
+        lines of the smali file, modified in place
+    load_library_name : str
+        name passed to System.loadLibrary
 
-    Returns:
-        bool: True when the call was inserted
+    Returns
+    -------
+    bool
+        True when the call was inserted
+
     """
     if load_library_name.startswith("lib"):
         load_library_name = load_library_name[3:]
@@ -79,15 +95,23 @@ def insert_load_library_call(text: list, load_library_name: str) -> bool:
 
 
 def insert_loadlibary(decompiled_path, main_activity, load_library_name):
-    """Inject loadlibary code to main activity.
+    """
+    Inject loadlibary code to main activity.
 
-    Args:
-        decompiled_path (str): decomplied path of apk file
-        main_activity (str): main activity of apk file
-        load_library_name (str): name of load library
+    Parameters
+    ----------
+    decompiled_path : str
+        decomplied path of apk file
+    main_activity : str
+        main activity of apk file
+    load_library_name : str
+        name of load library
 
-    Returns:
-        int: the smali_classes<N> number the patched activity sits in
+    Returns
+    -------
+    int
+        the smali_classes<N> number the patched activity sits in
+
     """
     logger.debug("Searching for the main activity in the smali files")
     target_smali, target_smali_class_number = find_activity_smali(
@@ -117,10 +141,14 @@ def insert_loadlibary(decompiled_path, main_activity, load_library_name):
 
 
 def modify_manifest(decompiled_path):
-    """Modify manifest permissions.
+    """
+    Modify manifest permissions.
 
-    Args:
-        decompiled_path (str): decomplied path of apk file
+    Parameters
+    ----------
+    decompiled_path : str
+        decomplied path of apk file
+
     """
     # Add internet permission
     logger.debug("Checking internet permission and extractNativeLibs settings")

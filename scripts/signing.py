@@ -22,10 +22,14 @@ def download_signer():
 
 
 def stdin_is_interactive():
-    """Check whether a child process could prompt on this stdin.
+    """
+    Check whether a child process could prompt on this stdin.
 
-    Returns:
-        bool: True if stdin is attached to a terminal
+    Returns
+    -------
+    bool
+        True if stdin is attached to a terminal
+
     """
     try:
         return sys.stdin is not None and sys.stdin.isatty()
@@ -34,13 +38,19 @@ def stdin_is_interactive():
 
 
 def redact_passwords(cmd: list):
-    """Hide keystore passwords in a command line before it is reported.
+    """
+    Hide keystore passwords in a command line before it is reported.
 
-    Args:
-        cmd (list): command line of the signer
+    Parameters
+    ----------
+    cmd : list
+        command line of the signer
 
-    Returns:
-        list: copy of the command line without password values
+    Returns
+    -------
+    list
+        copy of the command line without password values
+
     """
     redacted = list(cmd)
     for idx, arg in enumerate(redacted[:-1]):
@@ -51,15 +61,22 @@ def redact_passwords(cmd: list):
 
 
 def build_signer_command(signer_path: str, apk_path: str, keystore_options) -> list:
-    """Assemble the uber-apk-signer command line.
+    """
+    Assemble the uber-apk-signer command line.
 
-    Args:
-        signer_path (str): path of the downloaded signer jar
-        apk_path (str): path of apk file
-        keystore_options: pairs of signer flag and value, skipped when unset
+    Parameters
+    ----------
+    signer_path : str
+        path of the downloaded signer jar
+    apk_path : str
+        path of apk file
+    keystore_options: pairs of signer flag and value, skipped when unset
 
-    Returns:
-        list: the command to run
+    Returns
+    -------
+    list
+        the command to run
+
     """
     cmd = ["java", "-jar", signer_path, "--apks", apk_path]
     for flag, value in keystore_options:
@@ -70,19 +87,27 @@ def build_signer_command(signer_path: str, apk_path: str, keystore_options) -> l
 
 
 def wants_prompt(ks, ks_key_pass, ks_pass) -> bool:
-    """Decide whether uber-apk-signer should be given the terminal.
+    """
+    Decide whether uber-apk-signer should be given the terminal.
 
     It prompts for the passwords it was not given, which only works while it
     owns the terminal. Without one the prompt would block forever, so the
     piped behaviour is kept and the reason is reported.
 
-    Args:
-        ks (str): keystore file path
-        ks_key_pass (str): key password
-        ks_pass (str): keystore password
+    Parameters
+    ----------
+    ks : str
+        keystore file path
+    ks_key_pass : str
+        key password
+    ks_pass : str
+        keystore password
 
-    Returns:
-        bool: True when the signer should inherit the terminal
+    Returns
+    -------
+    bool
+        True when the signer should inherit the terminal
+
     """
     needs_prompt = bool(ks) and not (ks_pass and ks_key_pass)
     if not needs_prompt:
@@ -100,10 +125,14 @@ def wants_prompt(ks, ks_key_pass, ks_pass) -> bool:
 
 
 def report_signed_apk(output: str):
-    """Print the signer output and pick the signed APK path out of it.
+    """
+    Print the signer output and pick the signed APK path out of it.
 
-    Args:
-        output (str): everything uber-apk-signer wrote to stdout
+    Parameters
+    ----------
+    output : str
+        everything uber-apk-signer wrote to stdout
+
     """
     print(output)
     if "VERIFY" not in output:
@@ -124,14 +153,22 @@ def sign_apk(
     ks_key_pass: str = None,
     ks_pass: str = None,
 ):
-    """Run uber apk signer with option.
+    """
+    Run uber apk signer with option.
 
-    Args:
-        apk_path (str): path of apk file
-        ks (str): keystore file path
-        ks_alias (str): keystore alias
-        ks_key_pass (str): key password
-        ks_pass (str): keystore password
+    Parameters
+    ----------
+    apk_path : str
+        path of apk file
+    ks : str
+        keystore file path
+    ks_alias : str
+        keystore alias
+    ks_key_pass : str
+        key password
+    ks_pass : str
+        keystore password
+
     """
     cmd = build_signer_command(
         download_signer(),

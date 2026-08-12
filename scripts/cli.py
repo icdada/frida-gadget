@@ -1,4 +1,5 @@
-"""Command line entry point for injecting the Frida gadget into an APK.
+"""
+Command line entry point for injecting the Frida gadget into an APK.
 
 The work is spread across the sibling modules:
 - apktool: decompiling, recompiling, and restoring the original dex files
@@ -8,7 +9,6 @@ The work is spread across the sibling modules:
 What is left here is choosing and downloading the gadget, copying it into the
 APK together with its config and script, and the click command tying it up.
 """
-
 import atexit
 import json
 import shutil
@@ -46,13 +46,20 @@ def download_gadget(
     custom_gadget_path: str = None,
     github_repo: str = None,
 ):
-    """Download the frida gadget library or use a custom file.
+    """
+    Download the frida gadget library or use a custom file.
 
-    Args:
-        arch (str): architecture of the device
-        frida_version (str): specific frida version to use
-        custom_gadget_path (str): path to custom frida gadget file
-        github_repo (str): custom GitHub repository for the frida gadget
+    Parameters
+    ----------
+    arch : str
+        architecture of the device
+    frida_version : str
+        specific frida version to use
+    custom_gadget_path : str
+        path to custom frida gadget file
+    github_repo : str
+        custom GitHub repository for the frida gadget
+
     """
     # A custom gadget is used as-is, so the frida version is irrelevant here
     if custom_gadget_path:
@@ -105,13 +112,19 @@ def download_gadget(
 
 
 def detect_apk_architectures(decompiled_path):
-    """Detect architectures from the APK's lib directory.
+    """
+    Detect architectures from the APK's lib directory.
 
-    Args:
-        decompiled_path (str): decompiled path of apk file
+    Parameters
+    ----------
+    decompiled_path : str
+        decompiled path of apk file
 
-    Returns:
-        list: List of detected architectures
+    Returns
+    -------
+    list
+        List of detected architectures
+
     """
     lib_dir = decompiled_path.joinpath("lib")
     if not lib_dir.exists():
@@ -151,14 +164,21 @@ ARCH_DIRNAMES = {
 
 
 def resolve_main_activity(apk: APK, main_activity: str = None) -> str:
-    """Work out which activity the loadLibrary call goes into.
+    """
+    Work out which activity the loadLibrary call goes into.
 
-    Args:
-        apk (APK): parsed apk file
-        main_activity (str): activity given with --main-activity
+    Parameters
+    ----------
+    apk : APK
+        parsed apk file
+    main_activity : str
+        activity given with --main-activity
 
-    Returns:
-        str: the activity class name
+    Returns
+    -------
+    str
+        the activity class name
+
     """
     if main_activity:
         return main_activity
@@ -187,15 +207,23 @@ def resolve_main_activity(apk: APK, main_activity: str = None) -> str:
 
 
 def resolve_gadget_name(gadget_path: str, custom_gadget_name: str, arch: str) -> str:
-    """Decide the file name the gadget is stored under inside the APK.
+    """
+    Decide the file name the gadget is stored under inside the APK.
 
-    Args:
-        gadget_path (str): path of the downloaded or supplied gadget
-        custom_gadget_name (str): name given with --custom-gadget-name
-        arch (str): the requested architecture, or 'multi-arch'
+    Parameters
+    ----------
+    gadget_path : str
+        path of the downloaded or supplied gadget
+    custom_gadget_name : str
+        name given with --custom-gadget-name
+    arch : str
+        the requested architecture, or 'multi-arch'
 
-    Returns:
-        str: the file name to use in lib/<abi>
+    Returns
+    -------
+    str
+        the file name to use in lib/<abi>
+
     """
     if custom_gadget_name:
         gadget_name = custom_gadget_name + ".so"
@@ -213,17 +241,26 @@ def resolve_gadget_name(gadget_path: str, custom_gadget_name: str, arch: str) ->
 
 
 def prepare_lib_dir(decompiled_path: Path, current_arch: str) -> Path:
-    """Create the lib/<abi> directory the gadget is copied into.
+    """
+    Create the lib/<abi> directory the gadget is copied into.
 
-    Args:
-        decompiled_path (Path): decompiled path of apk file
-        current_arch (str): architecture being injected
+    Parameters
+    ----------
+    decompiled_path : Path
+        decompiled path of apk file
+    current_arch : str
+        architecture being injected
 
-    Returns:
-        Path: the lib/<abi> directory
+    Returns
+    -------
+    Path
+        the lib/<abi> directory
 
-    Raises:
-        NotImplementedError: the architecture has no known ABI directory
+    Raises
+    ------
+    NotImplementedError
+        the architecture has no known ABI directory
+
     """
     if current_arch not in ARCH_DIRNAMES:
         raise NotImplementedError(f"The architecture '{current_arch}' is not supported.")
@@ -234,13 +271,19 @@ def prepare_lib_dir(decompiled_path: Path, current_arch: str) -> Path:
 
 
 def load_config_data(config: str) -> dict:
-    """Read a gadget config file and check it declares an interaction.
+    """
+    Read a gadget config file and check it declares an interaction.
 
-    Args:
-        config (str): path of the config file
+    Parameters
+    ----------
+    config : str
+        path of the config file
 
-    Returns:
-        dict: the parsed config
+    Returns
+    -------
+    dict
+        the parsed config
+
     """
     with open(config, "r", encoding="utf-8") as f:
         config_data = json.load(f)
@@ -257,10 +300,14 @@ def load_config_data(config: str) -> dict:
 
 
 def warn_config_without_script(config: str):
-    """Explain what a config without --js means for the resulting APK.
+    """
+    Explain what a config without --js means for the resulting APK.
 
-    Args:
-        config (str): path of the config file
+    Parameters
+    ----------
+    config : str
+        path of the config file
+
     """
     logger.warning(
         "The '%s' config file was provided without the script file.", config
@@ -290,15 +337,23 @@ def warn_config_without_script(config: str):
 def write_gadget_config(
     config: str, js: str, lib_arch_dir: Path, load_library_name: str, upload_files: dict
 ):
-    """Write the gadget's config file next to the library.
+    """
+    Write the gadget's config file next to the library.
 
-    Args:
-        config (str): path given with --config
-        js (str): path given with --js
-        lib_arch_dir (Path): the lib/<abi> directory
-        load_library_name (str): name passed to System.loadLibrary
-        upload_files (dict): files still to copy, the config is removed from it
-                             once it has been written here
+    Parameters
+    ----------
+    config : str
+        path given with --config
+    js : str
+        path given with --js
+    lib_arch_dir : Path
+        the lib/<abi> directory
+    load_library_name : str
+        name passed to System.loadLibrary
+    upload_files : dict
+        files still to copy, the config is removed from it
+        once it has been written here
+
     """
     script_path = f"{load_library_name}.script.so"
 
@@ -330,12 +385,18 @@ def write_gadget_config(
 
 
 def upload_gadget_files(upload_files: dict, lib_arch_dir: Path, load_library_name: str):
-    """Copy the config and script files into the APK's lib directory.
+    """
+    Copy the config and script files into the APK's lib directory.
 
-    Args:
-        upload_files (dict): file type to source path
-        lib_arch_dir (Path): the lib/<abi> directory
-        load_library_name (str): name passed to System.loadLibrary
+    Parameters
+    ----------
+    upload_files : dict
+        file type to source path
+    lib_arch_dir : Path
+        the lib/<abi> directory
+    load_library_name : str
+        name passed to System.loadLibrary
+
     """
     for file_type, file_path in upload_files.items():
         if not file_path:
@@ -362,13 +423,20 @@ def upload_gadget_files(upload_files: dict, lib_arch_dir: Path, load_library_nam
 
 @dataclass
 class GadgetSource:
-    """Where the gadget library comes from and what it is called.
+    """
+    Where the gadget library comes from and what it is called.
 
-    Attributes:
-        custom_gadget_name (str): name given with --custom-gadget-name
-        custom_gadget_path (str): path given with --custom-gadget-path
-        frida_version (str): version given with --frida-version
-        github_repo (str): repository given with --github-repo
+    Attributes
+    ----------
+    custom_gadget_name : str
+        name given with --custom-gadget-name
+    custom_gadget_path : str
+        path given with --custom-gadget-path
+    frida_version : str
+        version given with --frida-version
+    github_repo : str
+        repository given with --github-repo
+
     """
 
     custom_gadget_name: Optional[str] = None
@@ -390,16 +458,25 @@ def inject_gadget_into_apk(
     js: str = None,
     gadget_source: "GadgetSource" = None,
 ) -> int:
-    """Inject frida gadget into an APK.
+    """
+    Inject frida gadget into an APK.
 
-    Args:
-        apk (APK): path of apk file
-        arch (str): architecture of the device
-        decompiled_path (str): decomplied path of apk file
+    Parameters
+    ----------
+    apk : APK
+        path of apk file
+    arch : str
+        architecture of the device
+    decompiled_path : str
+        decomplied path of apk file
 
-    Raises:
-        FileNotFoundError: file not found
-        NotImplementedError: not implemented
+    Raises
+    ------
+    FileNotFoundError
+        file not found
+    NotImplementedError
+        not implemented
+
     """
     apk = APK(apk_path)
     gadget_source = gadget_source or GadgetSource()
@@ -447,14 +524,18 @@ def inject_gadget_into_apk(
 
 
 def detect_adb_arch():
-    """Detect the architecture of the currently connected device via ADB.
+    """
+    Detect the architecture of the currently connected device via ADB.
 
     This function communicates with a connected Android device over ADB
     to determine its CPU architecture (e.g., arm64-v8a, armeabi-v7a, x86).
 
-    Returns:
-        str: The detected architecture of the connected device.
-              Defaults to 'arm64' if detection fails.
+    Returns
+    -------
+    str
+        The detected architecture of the connected device.
+        Defaults to 'arm64' if detection fails.
+
     """
     pipe = subprocess.PIPE
     cmd = ["adb", "shell", "getprop", "ro.product.cpu.abi"]
@@ -517,10 +598,14 @@ SUPPORTED_ARCHS = ["arm", "arm64", "x86", "x86_64"]
 
 
 def log_target_arch(arch: str):
-    """Report the architecture the gadget will be built for.
+    """
+    Report the architecture the gadget will be built for.
 
-    Args:
-        arch (str): normalized architecture name
+    Parameters
+    ----------
+    arch : str
+        normalized architecture name
+
     """
     if arch == "multi-arch":
         logger.info(
@@ -537,13 +622,19 @@ def log_target_arch(arch: str):
 
 
 def validate_arch(arch: str) -> str:
-    """Check the architecture is one we can download a gadget for.
+    """
+    Check the architecture is one we can download a gadget for.
 
-    Args:
-        arch (str): normalized architecture name
+    Parameters
+    ----------
+    arch : str
+        normalized architecture name
 
-    Returns:
-        str: the architecture, lowercased
+    Returns
+    -------
+    str
+        the architecture, lowercased
+
     """
     if arch == "multi-arch":
         return arch
@@ -560,11 +651,16 @@ def validate_arch(arch: str) -> str:
 
 
 def validate_input_files(js: str, config: str):
-    """Check the files given with --js and --config are usable.
+    """
+    Check the files given with --js and --config are usable.
 
-    Args:
-        js (str): path given with --js
-        config (str): path given with --config
+    Parameters
+    ----------
+    js : str
+        path given with --js
+    config : str
+        path given with --config
+
     """
     if js and not Path(js).exists():
         logger.error("The specified JavaScript file does not exist: %s", js)
@@ -586,14 +682,21 @@ def validate_input_files(js: str, config: str):
 
 
 def normalize_arch(arch: str, skip_decompile: bool) -> str:
-    """Turn the --arch value into one of the names used internally.
+    """
+    Turn the --arch value into one of the names used internally.
 
-    Args:
-        arch (str): value given with --arch, None to auto-detect over ADB
-        skip_decompile (bool): whether --skip-decompile was given
+    Parameters
+    ----------
+    arch : str
+        value given with --arch, None to auto-detect over ADB
+    skip_decompile : bool
+        whether --skip-decompile was given
 
-    Returns:
-        str: 'multi-arch' or one of the supported architecture names
+    Returns
+    -------
+    str
+        'multi-arch' or one of the supported architecture names
+
     """
     if arch is None:
         return detect_adb_arch()
@@ -610,14 +713,21 @@ def normalize_arch(arch: str, skip_decompile: bool) -> str:
 
 
 def wrap_js_file(js: str, js_delay: int) -> str:
-    """Write a delayed copy of the script and return its path.
+    """
+    Write a delayed copy of the script and return its path.
 
-    Args:
-        js (str): path given with --js
-        js_delay (int): seconds to wait before the script runs
+    Parameters
+    ----------
+    js : str
+        path given with --js
+    js_delay : int
+        seconds to wait before the script runs
 
-    Returns:
-        str: path of the wrapped copy
+    Returns
+    -------
+    str
+        path of the wrapped copy
+
     """
     if js is None:
         logger.error("The --js-delay option requires --js option to be specified.")
@@ -656,14 +766,21 @@ def wrap_js_file(js: str, js_delay: int) -> str:
 
 
 def wrap_js_with_timeout(js_content: str, delay: int) -> str:
-    """Wrap JavaScript content with setTimeout.
+    """
+    Wrap JavaScript content with setTimeout.
 
-    Args:
-        js_content (str): Original JavaScript content
-        delay (int): Seconds to wait before executing
+    Parameters
+    ----------
+    js_content : str
+        Original JavaScript content
+    delay : int
+        Seconds to wait before executing
 
-    Returns:
-        str: Wrapped JavaScript content
+    Returns
+    -------
+    str
+        Wrapped JavaScript content
+
     """
     return f"""setTimeout(function() {{
 {js_content}

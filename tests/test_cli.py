@@ -179,7 +179,6 @@ def test_missing_script_is_reported(tmp_path):
 
 def recording_github(asked):
     """Build a FridaGithub stand-in that records the version it was given."""
-
     class RecordingGithub:  # pylint: disable=too-few-public-methods
         """Reports a release whose assets never match."""
 
