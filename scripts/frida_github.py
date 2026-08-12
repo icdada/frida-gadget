@@ -4,25 +4,53 @@
 import lzma
 from pathlib import Path
 import requests
+import re
 
 class FridaGithub:
     """ Interact with Github """
 
-    GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/frida/frida/releases/latest'
-    GITHUB_TAGGED_RELEASE = 'https://api.github.com/repos/frida/frida/releases/tags/{tag}'
+    DEFAULT_GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/frida/frida/releases/latest'
+    DEFAULT_GITHUB_TAGGED_RELEASE = 'https://api.github.com/repos/frida/frida/releases/tags/{tag}'
 
     # the 'context' of this Github instance
     gadget_version = None
+    github_api_base = None
 
-    def __init__(self, gadget_version: str = None):
+    def __init__(self, gadget_version: str = "", github_repo: str = ""):
         """
             Init a new instance of Github
         """
 
         if gadget_version:
             self.gadget_version = gadget_version
-
+            
+        # Set GitHub API base URL based on custom repo or default
+        if github_repo:
+            if github_repo.startswith(('https://', 'github.com')):
+                match = re.search(r'\.com/([^/]+)/([^/]+)', github_repo)
+                if match:
+                    owner, repo = match.groups()
+                    self.github_api_base = f'https://api.github.com/repos/{owner}/{repo}'
+                else:
+                    raise ValueError(f"Invalid GitHub repository URL: {github_repo}")
+            else:
+                # Just owner/repo provided
+                if '/' in github_repo:
+                    self.github_api_base = f'https://api.github.com/repos/{github_repo}'
+                else:
+                    raise ValueError(f"Invalid GitHub repository format (expected 'owner/repo'): {github_repo}")
+        else:
+            self.github_api_base = 'https://api.github.com/repos/frida/frida'
+            
         self.request_cache = {}
+
+    @property
+    def GITHUB_LATEST_RELEASE(self):
+        return f'{self.github_api_base}/releases/latest'
+
+    @property
+    def GITHUB_TAGGED_RELEASE(self):
+        return f'{self.github_api_base}/releases/tags/{{tag}}'
 
     def _call(self, endpoint: str) -> dict:
         """
