@@ -490,6 +490,23 @@ def inject_gadget_into_apk(
     return insert_loadlibary(decompiled_path, main_activity, load_library_name)
 
 
+def redact_passwords(cmd: list):
+    """Hide keystore passwords in a command line before it is reported
+
+    Args:
+        cmd (list): command line of the signer
+
+    Returns:
+        list: copy of the command line without password values
+    """
+    redacted = list(cmd)
+    for idx, arg in enumerate(redacted[:-1]):
+        if arg in ("--ksPass", "--ksKeyPass"):
+            redacted[idx + 1] = "***"
+
+    return redacted
+
+
 def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: str = None, ks_pass: str = None):
     """Run uber apk signer with option
 
@@ -502,7 +519,6 @@ def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: s
     """
     signer_path = download_signer()  # Download apk signer
 
-    pipe = subprocess.PIPE
     cmd = ["java", "-jar", signer_path, "--apks", apk_path]
 
     if ks:
@@ -518,15 +534,31 @@ def sign_apk(apk_path: str, ks: str = None, ks_alias: str = None, ks_key_pass: s
         cmd.append("--ksPass")
         cmd.append(ks_pass)
 
+    if ks_key_pass or ks_pass:
+        logger.warning(
+            "Keystore passwords given on the command line are readable by every "
+            "other user on this machine through the process list.\n"
+            "Omit the --ks-pass and --ks-key-pass options to let uber-apk-signer "
+            "prompt for them instead."
+        )
+
+    # uber-apk-signer prompts for the passwords that were not provided,
+    # which only works while it owns the terminal.
+    interactive = bool(ks) and not (ks_pass and ks_key_pass)
+    stdio = None if interactive else subprocess.PIPE
+
     with subprocess.Popen(
-        cmd, stdin=pipe, stdout=subprocess.PIPE, stderr=sys.stderr
+        cmd, stdin=stdio, stdout=stdio, stderr=sys.stderr
     ) as process:
-        stdout, _ = process.communicate(b"\n")
+        stdout, _ = process.communicate(None if interactive else b"\n")
         if process.returncode != 0:
             logger.error("The APK signing process failed.")
             raise subprocess.CalledProcessError(
-                process.returncode, cmd, sys.stdout, sys.stderr
+                process.returncode, redact_passwords(cmd), sys.stdout, sys.stderr
             )
+
+        if stdout is None:  # the signer wrote directly to the terminal
+            return
 
         output = stdout.decode()
         print(output)
@@ -671,8 +703,8 @@ def wrap_js_with_timeout(js_content: str, delay: int) -> str:
 @click.option("--frida-version", default=None, help="Specify the Frida version to use.")
 @click.option("--ks", default=None, help="The keystore file. If not provided, will use debug keystore.")
 @click.option("--ks-alias", default=None, help="The alias of the used key in the keystore.")
-@click.option("--ks-key-pass", default=None, help="The password for the key.")
-@click.option("--ks-pass", default=None, help="The password for the keystore.")
+@click.option("--ks-key-pass", default=None, help="The password for the key. Prompted for if omitted.")
+@click.option("--ks-pass", default=None, help="The password for the keystore. Prompted for if omitted.")
 @click.option(
     "--version",
     is_flag=True,
