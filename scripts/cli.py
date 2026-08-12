@@ -33,10 +33,54 @@ from . import INSTALLED_FRIDA_VERSION
 
 p = Path(__file__)
 ROOT_DIR = p.parent.resolve()
-TEMP_DIR = ROOT_DIR.joinpath("temp")
 FILE_DIR = ROOT_DIR.joinpath("files")
 
 APKTOOL = which("apktool")
+
+
+def get_decompiled_path(apk_path: Path) -> Path:
+    """Build the path apktool decompiles the APK into
+
+    Args:
+        apk_path (Path): path of apk file
+
+    Returns:
+        Path: the decompile directory, next to the APK file
+    """
+    resolved = apk_path.resolve()
+    decompiled_path = resolved.with_suffix("")
+    if decompiled_path == resolved:
+        # The APK has no extension to strip, so keep the directory separate
+        decompiled_path = resolved.with_name(resolved.name + "_decompiled")
+    return decompiled_path
+
+
+def is_reusable_decompile_dir(path: Path) -> bool:
+    """Check whether a decompile directory can be safely removed
+
+    Only empty directories and previous apktool outputs are reusable, so an
+    unrelated directory that happens to share the APK name is never deleted.
+
+    Args:
+        path (Path): path of the decompile directory
+
+    Returns:
+        bool: True if the directory can be removed
+    """
+    if not path.is_dir():
+        return False
+
+    entries = list(path.iterdir())
+    if not entries:
+        return True
+
+    # 'apktool.yml' is only written once decoding finishes, so the artifacts
+    # of an interrupted or failed decompile are accepted as well.
+    return any(
+        entry.name in ("apktool.yml", "AndroidManifest.xml", "original", "unknown")
+        or entry.name.startswith("smali")
+        for entry in entries
+    )
 
 
 def run_apktool(option: list, apk_path: str):
@@ -772,13 +816,22 @@ def run(
             )
             sys.exit(-1)
 
-    # Make temp directory for decompile
-    decompiled_path = TEMP_DIR.joinpath(str(apk_path.resolve())[:-4])
+    # Make directory for decompile
+    decompiled_path = get_decompiled_path(apk_path)
     if not skip_decompile:
         logger.debug('Decompiling the target APK using apktool\n"%s"', decompiled_path)
         if decompiled_path.exists():
+            if not is_reusable_decompile_dir(decompiled_path):
+                logger.error(
+                    "The decompile target '%s' already exists and does not look like "
+                    "an apktool output.\n"
+                    "Remove or rename it, or use the --skip-decompile option "
+                    "if it already contains the decompiled APK.",
+                    decompiled_path,
+                )
+                sys.exit(-1)
             shutil.rmtree(decompiled_path)
-        decompiled_path.mkdir()
+        decompiled_path.mkdir(parents=True)
 
         # APK decompile with apktool
         decompile_option = ["d", "-o", str(decompiled_path.resolve()), "--force"]
