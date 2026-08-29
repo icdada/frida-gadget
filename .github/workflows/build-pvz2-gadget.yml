@@ -1,0 +1,54 @@
+name: Build PVZ2 Frida Gadget
+
+on:
+  workflow_dispatch:
+    inputs:
+      frida_ref:
+        description: Frida tag or commit
+        required: true
+        default: 17.15.3
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - name: Checkout wrapper repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Checkout Frida source
+        env:
+          FRIDA_REF: ${{ inputs.frida_ref }}
+        run: |
+          git clone --depth 1 --branch "$FRIDA_REF" --recurse-submodules https://github.com/frida/frida.git frida-source
+
+      - name: Build Frida iOS arm64
+        working-directory: frida-source
+        run: |
+          ./configure --host=ios-arm64
+          make -j"$(sysctl -n hw.ncpu)"
+
+      - name: Locate and package Gadget
+        shell: bash
+        run: |
+          set -euo pipefail
+          gadget="$(find frida-source -type f \( -name 'FridaGadget*.dylib' -o -name 'libfrida-gadget*.dylib' \) | head -n 1)"
+          test -n "$gadget"
+          mkdir -p dist
+          cp "$gadget" dist/PVZ2.dylib
+          file dist/PVZ2.dylib
+          otool -hv dist/PVZ2.dylib
+          shasum -a 256 dist/PVZ2.dylib | tee dist/SHA256SUMS
+
+      - name: Upload PVZ2.dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: PVZ2.dylib-${{ inputs.frida_ref }}
+          path: dist/
+          if-no-files-found: error
