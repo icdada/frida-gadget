@@ -49,11 +49,10 @@ jobs:
           IOS_CERTID=- ./configure --host=ios-arm64
           # Frida's generated flags include this GNU ld option; Apple ld64 does
           # dead stripping through its Darwin-specific flags instead.
-          # The Frida build may keep the flag in nested Ninja/.rsp files.
-          rg -l --hidden --glob '!\.git/**' -- '--gc-sections' . | while IFS= read -r file; do
-            sed -i '' 's/-Wl,--gc-sections//g' "$file"
-          done
-          find . -name build.ninja -type f -print0 | xargs -0 -r sed -i '' 's/-Wl,--gc-sections//g'
+          # Frida keeps linker arguments in generated Ninja and response files.
+          # Use BSD-compatible find/sed because macOS xargs lacks GNU's -r flag.
+          find . -type f \( -name 'build.ninja' -o -name '*.rsp' \) \
+            -exec sed -i '' 's/-Wl,--gc-sections//g' {} +
           make -j"$(sysctl -n hw.ncpu)"
 
       - name: Locate and package Gadget
