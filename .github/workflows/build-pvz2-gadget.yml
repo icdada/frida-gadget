@@ -12,6 +12,8 @@ jobs:
   build-ios:
     runs-on: macos-14
     timeout-minutes: 90
+    env:
+      IOS_CERTID: '-'
     steps:
       - name: Checkout wrapper repository
         uses: actions/checkout@v4
@@ -28,7 +30,6 @@ jobs:
         run: |
           git clone --depth 1 --branch "$FRIDA_REF" --recurse-submodules https://github.com/frida/frida.git frida-source
 
-<<<<<<< HEAD
       - name: Apply PVZ2 embedded-source overlay
         run: |
           set -euo pipefail
@@ -43,14 +44,9 @@ jobs:
 
       - name: Build Frida iOS arm64
         working-directory: frida-source
-        env:
-          IOS_CERTID: '-'
-=======
-      - name: Build Frida iOS arm64
-        working-directory: frida-source
->>>>>>> d781fc8c2fd91a81f939ab077dee7a6120a1fae4
         run: |
-          ./configure --host=ios-arm64
+          export IOS_CERTID="-"
+          IOS_CERTID=- ./configure --host=ios-arm64
           make -j"$(sysctl -n hw.ncpu)"
 
       - name: Locate and package Gadget
