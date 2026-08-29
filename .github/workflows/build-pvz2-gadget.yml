@@ -16,7 +16,9 @@ jobs:
       IOS_CERTID: '-'
     steps:
       - name: Checkout wrapper repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          repository: icdada/frida-gadget
 
       - name: Select Xcode
         run: |
@@ -46,6 +48,10 @@ jobs:
         working-directory: frida-source
         run: |
           export IOS_CERTID="-"
+          # Keep section GC for GNU linkers, but never add the GNU-only flag to
+          # Apple's linker. The upstream branch uses a broad else clause here.
+          sed -i '' '/if linker_flavor == "apple":/,/if linker_flavor == "gnu-gold":/ s/^        else:$/        elif linker_flavor != "apple":/' releng/env_generic.py
+          grep -A3 -B1 'linker_flavor == "apple"' releng/env_generic.py
           IOS_CERTID=- ./configure --host=ios-arm64
           # Frida's generated flags include this GNU ld option; Apple ld64 does
           # dead stripping through its Darwin-specific flags instead.
@@ -68,7 +74,7 @@ jobs:
           shasum -a 256 dist/PVZ2.dylib | tee dist/SHA256SUMS
 
       - name: Upload PVZ2.dylib
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: PVZ2.dylib-${{ inputs.frida_ref }}
           path: dist/
