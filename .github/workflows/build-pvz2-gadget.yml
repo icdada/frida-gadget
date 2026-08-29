@@ -47,6 +47,9 @@ jobs:
         run: |
           export IOS_CERTID="-"
           IOS_CERTID=- ./configure --host=ios-arm64
+          # Frida's generated flags include this GNU ld option; Apple ld64 does
+          # dead stripping through its Darwin-specific flags instead.
+          find . -name build.ninja -type f -print0 | xargs -0 sed -i '' 's/-Wl,--gc-sections//g'
           make -j"$(sysctl -n hw.ncpu)"
 
       - name: Locate and package Gadget
